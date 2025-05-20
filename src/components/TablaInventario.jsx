@@ -78,7 +78,8 @@ const TablaInventario = ({
     { key: 'categoria', label: 'Categoría' },
     { key: 'precioVenta', label: 'Precio Venta' },
     { key: 'precioCompra', label: 'Precio Compra' },
-    { key: 'cantidad', label: 'Cantidad' },
+    { key: 'stock', label: 'Stock' },
+    { key: 'stockMinimo', label: 'Mínimo' },
     { key: 'unidad', label: 'Unidad' },
     { key: 'acciones', label: 'Acciones' }
   ];
@@ -107,10 +108,10 @@ const TablaInventario = ({
       result = result.filter(p => p.precioVenta <= Number(filters.precioMax));
     }
     if (filters.cantidadMin) {
-      result = result.filter(p => p.cantidad >= Number(filters.cantidadMin));
+      result = result.filter(p => p.stock >= Number(filters.cantidadMin));
     }
     if (filters.cantidadMax) {
-      result = result.filter(p => p.cantidad <= Number(filters.cantidadMax));
+      result = result.filter(p => p.stock <= Number(filters.cantidadMax));
     }
 
     // Aplicar ordenamiento
@@ -159,12 +160,24 @@ const TablaInventario = ({
       case 'precioVenta':
       case 'precioCompra':
         return `S/ ${parseFloat(producto[key] || 0).toFixed(2)}`;
-      case 'cantidad':
+      case 'stock':
+        const bajoStock = producto.stock <= producto.stockMinimo;
         return (
-          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-            producto.cantidad < 5 ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
-          }`}>
-            {producto.cantidad} {producto.unidad}
+          <div className="flex flex-col">
+            <span className={`px-2 py-1 rounded-full text-xs font-medium text-center ${
+              bajoStock ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
+            }`}>
+              {producto.stock} {producto.unidad}
+            </span>
+            {bajoStock && (
+              <span className="text-xs text-red-500 mt-1">¡Stock bajo!</span>
+            )}
+          </div>
+        );
+      case 'stockMinimo':
+        return (
+          <span className="text-sm text-gray-700">
+            {producto.stockMinimo} {producto.unidad}
           </span>
         );
       default:

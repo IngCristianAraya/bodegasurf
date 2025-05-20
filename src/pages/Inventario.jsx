@@ -1,8 +1,9 @@
 // pages/Inventario.jsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useContext } from "react";
 import { Modal } from "react-bootstrap";
 import { Search, Plus, Barcode, CheckCircle2 as CheckCircle, XCircle, Package, ShoppingCart } from 'lucide-react';
 import { useSearch } from "../context/SearchContext";
+import { InventarioContext } from "../context/InventarioContext";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import FormularioProducto from "../components/FormularioProducto";
@@ -28,24 +29,21 @@ const CustomToast = ({ message, type = 'success' }) => (
 
 const Inventario = () => {
   const { searchTerm, updateSearchTerm } = useSearch();
+  const { productos, agregarProducto, actualizarProducto, eliminarProducto } = useContext(InventarioContext);
   
   const handleSearchChange = (e) => {
     updateSearchTerm(e.target.value);
   };
-  const [productos, setProductos] = useState([
-    { id: 1, nombre: "Leche Gloria", categoria: "Lácteos", precioCompra: 3, precioVenta: 4, unidad: "litros", cantidad: 1, codigoBarras: "123456789012" },
-    { id: 2, nombre: "Arroz Costeño", categoria: "Abarrotes", precioCompra: 1, precioVenta: 2, unidad: "kilos", cantidad: 5, codigoBarras: "987654321098" },
-    { id: 3, nombre: "Aceite Primor", categoria: "Abarrotes", precioCompra: 5, precioVenta: 6, unidad: "litros", cantidad: 10, codigoBarras: "456789012345" },
-    { id: 4, nombre: "Atún Isabel", categoria: "Conservas", precioCompra: 4, precioVenta: 5, unidad: "latas", cantidad: 20, codigoBarras: "321098765432" },
-  ]);
 
   // Filtrar productos según el término de búsqueda
   const productosFiltrados = useMemo(() => {
     if (!searchTerm) return productos;
     
+    const term = searchTerm.toLowerCase();
     return productos.filter(producto => 
-      producto.nombre.toLowerCase().includes(searchTerm) ||
-      producto.categoria.toLowerCase().includes(searchTerm)
+      (producto.nombre && producto.nombre.toLowerCase().includes(term)) ||
+      (producto.categoria && producto.categoria.toLowerCase().includes(term)) ||
+      (producto.codigoBarras && producto.codigoBarras.includes(term))
     );
   }, [productos, searchTerm]);
 
@@ -56,9 +54,20 @@ const Inventario = () => {
   const handleShowScanner = () => setShowScanner(true);
   const handleCloseScanner = () => setShowScanner(false);
   const handleShowModal = () => setShowModal(true);
-  const handleCloseModal = () => setShowModal(false);
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setProductoEdit(null);
+  };
+  
   const [nuevoProducto, setNuevoProducto] = useState({
-    nombre: "", categoria: "Abarrotes", precioCompra: "", precioVenta: "", unidad: "unidad", cantidad: "", codigoBarras: ""
+    nombre: "", 
+    categoria: "Abarrotes", 
+    precioCompra: "", 
+    precioVenta: "", 
+    unidad: "unidad", 
+    stock: "",
+    stockMinimo: "",
+    codigoBarras: ""
   });
 
   const handleChange = (e) => {
@@ -82,9 +91,9 @@ const Inventario = () => {
 
   // handleCloseModal ya está definido más abajo
 
-  const handleSaveChanges = () => {
+  const handleSaveChanges = async () => {
     try {
-      setProductos((prev) => prev.map((p) => (p.id === productoEdit.id ? productoEdit : p)));
+      await actualizarProducto(productoEdit);
       handleCloseModal();
       toast.success('Producto actualizado correctamente');
     } catch (error) {
@@ -93,31 +102,46 @@ const Inventario = () => {
     }
   };
 
-  const handleAddProducto = (e) => {
+  const handleAddProducto = async (e) => {
     e.preventDefault();
     try {
       const newProduct = { 
-        ...nuevoProducto, 
-        id: Date.now(),
-        fechaCreacion: new Date().toISOString()
+        ...nuevoProducto,
+        precioCompra: parseFloat(nuevoProducto.precioCompra),
+        precioVenta: parseFloat(nuevoProducto.precioVenta),
+        stock: parseInt(nuevoProducto.stock, 10),
+        stockMinimo: parseInt(nuevoProducto.stockMinimo, 10) || 0,
       };
-      setProductos((prev) => [...prev, newProduct]);
-      setNuevoProducto({ nombre: "", categoria: "Abarrotes", precioCompra: "", precioVenta: "", unidad: "unidad", cantidad: "" });
+      
+      await agregarProducto(newProduct);
+      
+      // Resetear el formulario
+      setNuevoProducto({
+        nombre: "", 
+        categoria: "Abarrotes", 
+        precioCompra: "", 
+        precioVenta: "", 
+        unidad: "unidad", 
+        stock: "",
+        stockMinimo: "",
+        codigoBarras: ""
+      });
+      
       toast.success('Producto agregado correctamente');
     } catch (error) {
       console.error('Error al agregar el producto:', error);
-      toast.error('Error al agregar el producto');
+      toast.error('Error al agregar el producto: ' + (error.message || 'Error desconocido'));
     }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este producto?')) {
       try {
-        setProductos((prev) => prev.filter((producto) => producto.id !== id));
+        await eliminarProducto(id);
         toast.success('Producto eliminado correctamente');
       } catch (error) {
-        toast.error('Error al eliminar el producto');
         console.error('Error al eliminar el producto:', error);
+        toast.error('Error al eliminar el producto');
       }
     }
   };
@@ -135,27 +159,37 @@ const Inventario = () => {
       setNuevoProducto(prev => ({
         ...prev,
         codigoBarras: barcode,
-        nombre: `Producto ${barcode.substring(0, 6)}`
+        nombre: `Producto ${barcode.substring(0, 6)}`,
+        stock: 1,
+        stockMinimo: 1,
+        precioCompra: 0,
+        precioVenta: 0
       }));
       setShowModal(true);
     }
   };
   
-  const handleImportData = (importedData) => {
+  const handleImportData = async (importedData) => {
     try {
-      // Asignar IDs a los productos importados si no los tienen
+      // Formatear los datos importados
       const formattedData = importedData.map(item => ({
         ...item,
-        id: item.id || Date.now() + Math.random(),
-        codigoBarras: item.codigoBarras || `CB-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        fechaCreacion: item.fechaCreacion || new Date().toISOString()
+        precioCompra: parseFloat(item.precioCompra) || 0,
+        precioVenta: parseFloat(item.precioVenta) || 0,
+        stock: parseInt(item.stock, 10) || 0,
+        stockMinimo: parseInt(item.stockMinimo, 10) || 0,
+        codigoBarras: item.codigoBarras || `CB-${Date.now()}-${Math.floor(Math.random() * 1000)}`
       }));
       
-      setProductos(prev => [...prev, ...formattedData]);
+      // Agregar cada producto usando el contexto
+      for (const item of formattedData) {
+        await agregarProducto(item);
+      }
+      
       toast.success(`Se importaron ${formattedData.length} productos correctamente`);
     } catch (error) {
       console.error('Error al importar datos:', error);
-      toast.error('Error al importar los datos');
+      toast.error('Error al importar los datos: ' + (error.message || 'Error desconocido'));
     }
   };
 

@@ -36,41 +36,67 @@ const FormularioProducto = ({ producto, onChange, onSubmit, onScanClick, hideHea
   const fileInputRef = useRef(null);
   // El estado del escáner ahora se maneja en el componente padre
 
-  // Efecto para validar precios cuando cambian
+  // Efecto para validar precios y stock cuando cambian
   useEffect(() => {
-    if (producto.precioCompra && producto.precioVenta && 
-        Number(producto.precioVenta) <= Number(producto.precioCompra)) {
-      setErrores(prev => ({
-        ...prev,
-        precioVenta: 'El precio de venta debe ser mayor al de compra'
-      }));
-    } else if (errores.precioVenta === 'El precio de venta debe ser mayor al de compra') {
-      const { precioVenta, ...restErrores } = errores;
-      setErrores(restErrores);
+    const nuevosErrores = { ...errores };
+    
+    // Validar precios
+    if (producto.precioCompra && producto.precioVenta) {
+      if (Number(producto.precioVenta) <= Number(producto.precioCompra)) {
+        nuevosErrores.precioVenta = 'El precio de venta debe ser mayor al de compra';
+      } else if (nuevosErrores.precioVenta === 'El precio de venta debe ser mayor al de compra') {
+        delete nuevosErrores.precioVenta;
+      }
     }
-  }, [producto.precioCompra, producto.precioVenta]);
+    
+    // Validar stock mínimo
+    if (producto.stockMinimo !== undefined && producto.stockMinimo !== '' && 
+        (isNaN(producto.stockMinimo) || Number(producto.stockMinimo) < 0)) {
+      nuevosErrores.stockMinimo = 'El stock mínimo debe ser un número positivo';
+    } else if (nuevosErrores.stockMinimo) {
+      delete nuevosErrores.stockMinimo;
+    }
+    
+    // Validar stock
+    if (producto.stock !== undefined && producto.stock !== '' && 
+        (isNaN(producto.stock) || !Number.isInteger(Number(producto.stock)) || Number(producto.stock) < 0)) {
+      nuevosErrores.stock = 'El stock debe ser un número entero positivo';
+    } else if (nuevosErrores.stock) {
+      delete nuevosErrores.stock;
+    }
+    
+    setErrores(nuevosErrores);
+  }, [producto.precioCompra, producto.precioVenta, producto.stock, producto.stockMinimo]);
 
   const validarCampos = () => {
     const nuevosErrores = {};
     
+    // Validaciones básicas
     if (!producto.nombre?.trim()) nuevosErrores.nombre = 'El nombre es requerido';
     if (!producto.categoria?.trim()) nuevosErrores.categoria = 'La categoría es requerida';
     if (!producto.unidad?.trim()) nuevosErrores.unidad = 'La unidad es requerida';
     
     // Validación de precios
-    if (!producto.precioCompra || isNaN(producto.precioCompra) || Number(producto.precioCompra) <= 0) {
+    if (!producto.precioCompra || isNaN(producto.precioCompra) || Number(producto.precioCompra) < 0) {
       nuevosErrores.precioCompra = 'Precio de compra inválido';
     }
     
-    if (!producto.precioVenta || isNaN(producto.precioVenta) || Number(producto.precioVenta) <= 0) {
+    if (!producto.precioVenta || isNaN(producto.precioVenta) || Number(producto.precioVenta) < 0) {
       nuevosErrores.precioVenta = 'Precio de venta inválido';
     } else if (Number(producto.precioVenta) <= Number(producto.precioCompra || 0)) {
       nuevosErrores.precioVenta = 'El precio de venta debe ser mayor al de compra';
     }
     
-    // Validación de cantidad
-    if (producto.cantidad === '' || isNaN(producto.cantidad) || !Number.isInteger(Number(producto.cantidad)) || Number(producto.cantidad) < 0) {
-      nuevosErrores.cantidad = 'Cantidad inválida';
+    // Validación de stock
+    if (producto.stock === '' || isNaN(producto.stock) || !Number.isInteger(Number(producto.stock)) || Number(producto.stock) < 0) {
+      nuevosErrores.stock = 'Stock inválido';
+    }
+    
+    // Validación de stock mínimo
+    if (producto.stockMinimo === '' || isNaN(producto.stockMinimo) || !Number.isInteger(Number(producto.stockMinimo)) || Number(producto.stockMinimo) < 0) {
+      nuevosErrores.stockMinimo = 'Stock mínimo inválido';
+    } else if (Number(producto.stockMinimo) > Number(producto.stock || 0)) {
+      nuevosErrores.stockMinimo = 'No puede ser mayor que el stock actual';
     }
 
     setErrores(nuevosErrores);
@@ -264,15 +290,18 @@ const FormularioProducto = ({ producto, onChange, onSubmit, onScanClick, hideHea
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 col-span-2">
         <div>
           <label className="block text-sm font-semibold text-gray-800 mb-1">
-            <span className="border-b-2 border-yellow-500 pb-0.5">Precio de Compra</span>
+            <span className="border-b-2 border-yellow-500 pb-0.5">Precio de Compra (S/)</span>
           </label>
-          <div>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <DollarSign className="h-5 w-5 text-gray-400" />
+            </div>
             <input
               type="number"
               name="precioCompra"
-              value={producto.precioCompra}
+              value={producto.precioCompra ?? ''}
               onChange={onChange}
-              className={`w-full p-2 border ${
+              className={`pl-10 w-full p-2 border ${
                 errores.precioCompra ? 'border-red-500' : 'border-gray-300'
               } rounded-lg`}
               placeholder="0.00"
@@ -287,15 +316,18 @@ const FormularioProducto = ({ producto, onChange, onSubmit, onScanClick, hideHea
 
         <div>
           <label className="block text-sm font-semibold text-gray-800 mb-1">
-            <span className="border-b-2 border-yellow-500 pb-0.5">Precio de Venta</span>
+            <span className="border-b-2 border-yellow-500 pb-0.5">Precio de Venta (S/)</span>
           </label>
-          <div>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Tag className="h-5 w-5 text-gray-400" />
+            </div>
             <input
               type="number"
               name="precioVenta"
-              value={producto.precioVenta}
+              value={producto.precioVenta ?? ''}
               onChange={onChange}
-              className={`w-full p-2 border ${
+              className={`pl-10 w-full p-2 border ${
                 errores.precioVenta ? 'border-red-500' : 'border-gray-300'
               } rounded-lg`}
               placeholder="0.00"
@@ -303,32 +335,71 @@ const FormularioProducto = ({ producto, onChange, onSubmit, onScanClick, hideHea
               step="0.01"
             />
           </div>
-          {errores.precioVenta && (
+          {errores.precioVenta ? (
             <p className="text-red-500 text-xs mt-1">{errores.precioVenta}</p>
+          ) : (
+            <p className="text-xs text-gray-500 mt-1">Precio de venta al público</p>
           )}
         </div>
       </div>
 
-      {/* Cantidad */}
-      <div>
-        <label className="block text-sm font-semibold text-gray-800 mb-1">
-          <span className="border-b-2 border-yellow-500 pb-0.5">Cantidad</span>
-        </label>
-        <input
-          type="number"
-          name="cantidad"
-          value={producto.cantidad}
-          onChange={onChange}
-          className={`w-full p-2 border ${
-            errores.cantidad ? 'border-red-500' : 'border-gray-300'
-          } rounded-lg`}
-          placeholder="Ej. 10"
-          min="0"
-          step="1"
-        />
-        {errores.cantidad && (
-          <p className="text-red-500 text-xs mt-1">{errores.cantidad}</p>
-        )}
+      {/* Stock y Stock Mínimo */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 col-span-2">
+        <div>
+          <label className="block text-sm font-semibold text-gray-800 mb-1">
+            <span className="border-b-2 border-yellow-500 pb-0.5">Stock Actual</span>
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Box className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="number"
+              name="stock"
+              value={producto.stock ?? ''}
+              onChange={onChange}
+              className={`pl-10 w-full p-2 border ${
+                errores.stock ? 'border-red-500' : 'border-gray-300'
+              } rounded-lg`}
+              placeholder="0"
+              min="0"
+              step="1"
+            />
+          </div>
+          {errores.stock ? (
+            <p className="text-red-500 text-xs mt-1">{errores.stock}</p>
+          ) : (
+            <p className="text-xs text-gray-500 mt-1">Cantidad disponible en inventario</p>
+          )}
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-800 mb-1">
+            <span className="border-b-2 border-yellow-500 pb-0.5">Stock Mínimo</span>
+          </label>
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Package className="h-5 w-5 text-gray-400" />
+            </div>
+            <input
+              type="number"
+              name="stockMinimo"
+              value={producto.stockMinimo ?? ''}
+              onChange={onChange}
+              className={`pl-10 w-full p-2 border ${
+                errores.stockMinimo ? 'border-red-500' : 'border-gray-300'
+              } rounded-lg`}
+              placeholder="0"
+              min="0"
+              step="1"
+            />
+          </div>
+          {errores.stockMinimo ? (
+            <p className="text-red-500 text-xs mt-1">{errores.stockMinimo}</p>
+          ) : (
+            <p className="text-xs text-gray-500 mt-1">Se notificará cuando el stock esté por debajo de este valor</p>
+          )}
+        </div>
       </div>
 
       {/* Subir Imagen */}
