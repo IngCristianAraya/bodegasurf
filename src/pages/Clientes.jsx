@@ -1,22 +1,30 @@
+
 import { useState, useEffect, useMemo } from 'react';
 import { 
   Search, 
   Plus, 
-  User, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  FileText, 
-  FileSpreadsheet, 
-  Pencil, 
+  Edit, 
   Trash2, 
-  X,
+  UserCheck, 
+  UserX, 
+  Filter, 
+  Download, 
+  Upload, 
+  X, 
+  Check, 
+  ChevronDown, 
   ChevronUp,
-  ChevronDown,
+  Users,
   ChevronsUpDown,
-  Filter,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  FileSpreadsheet,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  FileText,
+  Pencil
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -209,8 +217,20 @@ const Clientes = () => {
 
   // Renderizar el componente
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-6">Gestión de Clientes</h1>
+    <div className="flex flex-col space-y-6 p-4 h-full">
+      {/* Título con estilo mejorado */}
+      <div className="mb-6 relative pl-5 py-3 rounded-lg bg-gradient-to-r from-yellow-50 to-white shadow-sm">
+        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-yellow-400 to-yellow-500 rounded-full"></div>
+        <div className="flex items-center">
+          <div className="bg-yellow-100 p-2 rounded-lg mr-3">
+            <Users className="text-yellow-600 w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Gestión de Clientes</h1>
+            <p className="text-sm text-gray-500">Administra y controla la información de tus clientes</p>
+          </div>
+        </div>
+      </div>
       
       {/* Tarjetas de resumen */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

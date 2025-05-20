@@ -26,9 +26,9 @@ const AlertasInventario = ({ productos, limiteMinimo = 5 }) => {
         onClick={() => setIsOpen(!isOpen)}
         className={`relative flex items-center justify-center w-14 h-14 rounded-full shadow-xl ${
           hasAlerts 
-            ? 'bg-gradient-to-br from-red-500 to-red-600 hover:from-red-600 hover:to-red-700' 
-            : 'bg-gradient-to-br from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700'
-        } text-white transition-all duration-300 focus:outline-none focus:ring-3 focus:ring-yellow-400 focus:ring-opacity-50`}
+            ? 'bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700' 
+            : 'bg-gradient-to-br from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700'
+        } text-white transition-all duration-300 focus:outline-none focus:ring-3 focus:ring-orange-400 focus:ring-opacity-50`}
         aria-label="Ver alertas de inventario"
       >
         <div className="relative">
