@@ -1,0 +1,52 @@
+/* index.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* src/index.css */
+body {
+  background-color: #F8F9FA; /* Fondo claro */
+  color: #343A40; /* Texto gris oscuro */
+}
+
+button, input, select {
+  border-radius: 8px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.bg-primary {
+  background-color: #FFEB3B; /* Amarillo */
+}
+
+.text-primary {
+  color: #FFEB3B; /* Amarillo */
+}
+
+.bg-accent {
+  background-color: #FF9800; /* Naranja */
+}
+
+.text-accent {
+  color: #FF9800; /* Naranja */
+}
+/* Estilos personalizados */
+body {
+  @apply font-sans text-gray-800 bg-gray-50;
+}
+
+h1, h2, h3 {
+  @apply font-bold text-gray-900;
+}
+
+a {
+  @apply transition-colors duration-300;
+}
+
+button {
+  @apply transition-all duration-300;
+}
