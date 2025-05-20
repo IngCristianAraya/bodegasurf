@@ -1,7 +1,7 @@
 // pages/Inventario.jsx
 import React, { useState, useMemo } from "react";
 import { Modal } from "react-bootstrap";
-import { Search, Plus, Barcode, CheckCircle, XCircle } from 'lucide-react';
+import { Search, Plus, Barcode, CheckCircle, XCircle, Package, ShoppingCart } from 'lucide-react';
 import { useSearch } from "../context/SearchContext";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -50,7 +50,13 @@ const Inventario = () => {
   }, [productos, searchTerm]);
 
   const [showModal, setShowModal] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [productoEdit, setProductoEdit] = useState(null);
+  
+  const handleShowScanner = () => setShowScanner(true);
+  const handleCloseScanner = () => setShowScanner(false);
+  const handleShowModal = () => setShowModal(true);
+  const handleCloseModal = () => setShowModal(false);
   const [nuevoProducto, setNuevoProducto] = useState({
     nombre: "", categoria: "Abarrotes", precioCompra: "", precioVenta: "", unidad: "unidad", cantidad: "", codigoBarras: ""
   });
@@ -74,7 +80,7 @@ const Inventario = () => {
     setShowModal(true);
   };
 
-  const handleCloseModal = () => setShowModal(false);
+  // handleCloseModal ya está definido más abajo
 
   const handleSaveChanges = () => {
     try {
@@ -116,8 +122,6 @@ const Inventario = () => {
     }
   };
 
-  const [showScanner, setShowScanner] = useState(false);
-
   const handleBarcodeScanned = (barcode) => {
     // Buscar si el código de barras ya existe
     const productoExistente = productos.find(p => p.codigoBarras === barcode);
@@ -157,18 +161,52 @@ const Inventario = () => {
 
   return (
     <div className="flex flex-col space-y-6 p-4 h-full">
-      {/* Sección superior con dos columnas */}
+      {/* Título con estilo mejorado */}
+      <div className="mb-6 relative pl-5 py-3 rounded-lg bg-gradient-to-r from-yellow-50 to-white shadow-sm">
+        <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-yellow-400 to-yellow-500 rounded-full"></div>
+        <div className="flex items-center">
+          <div className="bg-yellow-100 p-2 rounded-lg mr-3">
+            <Package className="text-yellow-600 w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800">Gestión de Inventario</h1>
+            <p className="text-sm text-gray-500">Administra y controla tu inventario de productos</p>
+          </div>
+        </div>
+      </div>
+      
+      {/* Modal del escáner de código de barras */}
+      <Modal show={showScanner} onHide={handleCloseScanner} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Escanear Código de Barras</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <EscanerCodigoBarras onScan={(codigo) => {
+            setNuevoProducto(prev => ({ ...prev, codigoBarras: codigo }));
+            handleCloseScanner();
+          }} />
+        </Modal.Body>
+      </Modal>
+      
+      {/* Sección principal con dos columnas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0">
         {/* Columna izquierda: Formulario de producto */}
         <div className="md:col-span-1 flex flex-col h-full">
           <div className="bg-white p-4 rounded-lg shadow flex-1 flex flex-col">
-            <h2 className="text-lg font-semibold mb-4">Agregar Producto</h2>
+            <div className="flex items-center mb-6 border-b pb-4 min-h-[72px]">
+              <ShoppingCart className="text-yellow-500 w-8 h-8 mr-3 flex-shrink-0" />
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Agregar Producto</h2>
+                <p className="text-sm text-gray-500">Llena los campos para registrar un nuevo producto</p>
+              </div>
+            </div>
             <div className="flex-1 overflow-y-auto">
               <FormularioProducto 
                 producto={nuevoProducto} 
                 onChange={handleChange} 
                 onSubmit={handleAddProducto}
                 onScanClick={() => setShowScanner(true)}
+                hideHeader={true}
               />
             </div>
           </div>
@@ -177,7 +215,13 @@ const Inventario = () => {
         {/* Columna derecha: Inventario Actual */}
         <div className="md:col-span-2 flex flex-col h-full">
           <div className="bg-white p-4 rounded-lg shadow flex-1 flex flex-col">
-            <h2 className="text-lg font-semibold mb-4">Inventario de Productos</h2>
+            <div className="flex items-center mb-6 border-b pb-4 min-h-[72px]">
+              <Package className="text-yellow-500 w-8 h-8 mr-3 flex-shrink-0" />
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Inventario de Productos</h2>
+                <p className="text-sm text-gray-500">Visualización y gestión del inventario actual</p>
+              </div>
+            </div>
             <div className="flex-1 flex flex-col min-h-0">
               <TablaInventario 
                 productos={productosFiltrados} 
@@ -192,35 +236,30 @@ const Inventario = () => {
         </div>
       </div>
 
-      {/* Sección de herramientas */}
-      <div className="space-y-6">
-        <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
-          <div className="flex items-center mb-5">
-            <div className="p-2 bg-yellow-50 rounded-lg mr-3 border border-yellow-100">
-              <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-              </svg>
-            </div>
-            <div>
-              <h3 className="text-base font-semibold text-gray-800">Gestión de Datos</h3>
-              <p className="text-sm text-gray-500">Importa o exporta la información de tu inventario</p>
-            </div>
+      {/* Sección de gestión de datos */}
+      <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
+        <div className="flex items-center mb-5">
+          <div className="p-2 bg-yellow-50 rounded-lg mr-3 border border-yellow-100">
+            <svg className="w-5 h-5 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+            </svg>
           </div>
-          <ImportExport 
-            productos={productos} 
-            onImport={handleImportData} 
-          />
+          <div>
+            <h3 className="text-base font-semibold text-gray-800">Gestión de Datos</h3>
+            <p className="text-sm text-gray-500">Importa o exporta la información de tu inventario</p>
+          </div>
         </div>
-
-        {/* Alertas de inventario */}
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Alertas de Inventario</h2>
-          <AlertasInventario 
-            productos={productos} 
-            nivelMinimo={5} 
-          />
-        </div>
+        <ImportExport 
+          productos={productos} 
+          onImport={handleImportData} 
+        />
       </div>
+      
+      {/* Alertas flotantes */}
+      <AlertasInventario 
+        productos={productos} 
+        nivelMinino={5} 
+      />
       {showScanner && (
         <EscanerCodigoBarras
           onScan={(barcode) => {

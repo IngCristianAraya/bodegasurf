@@ -28,7 +28,7 @@ const UNIDADES = [
   { valor: "otro", etiqueta: "Otro" }
 ];
 
-const FormularioProducto = ({ producto, onChange, onSubmit, onScanClick }) => {
+const FormularioProducto = ({ producto, onChange, onSubmit, onScanClick, hideHeader = false }) => {
   const [imagenPreview, setImagenPreview] = useState(null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -136,13 +136,15 @@ const FormularioProducto = ({ producto, onChange, onSubmit, onScanClick }) => {
       <form onSubmit={handleFormSubmit}>
         <div className="space-y-6">
           {/* ENCABEZADO */}
-          <div className="flex items-center mb-6 border-b pb-4">
-            <ShoppingCart className="text-yellow-500 w-8 h-8 mr-3" />
-            <div>
-              <h2 className="text-xl font-bold text-gray-800">Agregar Producto</h2>
-              <p className="text-sm text-gray-500">Llena los campos para registrar un nuevo producto</p>
+          {!hideHeader && (
+            <div className="flex items-center mb-6 border-b pb-4">
+              <ShoppingCart className="text-yellow-500 w-8 h-8 mr-3" />
+              <div>
+                <h2 className="text-xl font-bold text-gray-800">Agregar Producto</h2>
+                <p className="text-sm text-gray-500">Llena los campos para registrar un nuevo producto</p>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* FORMULARIO */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
