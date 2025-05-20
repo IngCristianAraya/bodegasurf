@@ -1,8 +1,9 @@
 // src/pages/Ventas.jsx
-import { useState, useEffect } from 'react';
-import { Plus, ShoppingCart, X, Search, Filter, ArrowLeft } from 'lucide-react';
+import { useState, useEffect, useContext } from 'react';
+import { Plus, ShoppingCart, X, Search, Filter, ArrowLeft, CheckCircle } from 'lucide-react';
 import ProductoItem from '../components/ventas/ProductoItem';
 import CarritoResumen from '../components/ventas/CarritoResumen';
+import { useInventario } from '../context/InventarioContext';
 import SearchBar from '../components/ventas/SearchBar';
 import CategoriaItem from '../components/ventas/CategoriaItem';
 
@@ -100,20 +101,49 @@ function Ventas() {
     setCarrito(prevCarrito => prevCarrito.filter(item => item.id !== productoId));
   };
 
+  // Estado para controlar la notificación de venta exitosa
+  const [ventaExitosa, setVentaExitosa] = useState(false);
+  
   // Realizar venta
-  const realizarVenta = () => {
-    // Actualizar el stock de cada producto vendido
-    carrito.forEach(item => {
-      actualizarStock(item.id, item.cantidad);
-    });
-    
-    // Aquí podrías agregar la lógica para guardar la venta en el historial
-    console.log('Venta realizada:', carrito);
-    
-    // Mostrar mensaje de éxito y limpiar carrito
-    alert(`Venta registrada con éxito por un total de S/.${calcularTotal().toFixed(2)}`);
-    setCarrito([]);
-    setMostrarCarrito(false);
+  const realizarVenta = async () => {
+    try {
+      // Validar que haya productos en el carrito
+      if (carrito.length === 0) {
+        throw new Error('No hay productos en el carrito');
+      }
+      
+      // Validar que todos los productos tengan stock suficiente
+      const productosSinStock = carrito.filter(item => item.cantidad > item.stock);
+      if (productosSinStock.length > 0) {
+        const nombresProductos = productosSinStock.map(p => p.nombre).join(', ');
+        throw new Error(`No hay suficiente stock para: ${nombresProductos}`);
+      }
+      
+      // Actualizar el stock de cada producto vendido
+      carrito.forEach(item => {
+        actualizarStock(item.id, item.cantidad);
+      });
+      
+      // Aquí podrías agregar la lógica para guardar la venta en el historial
+      console.log('Venta realizada:', carrito);
+      
+      // Mostrar notificación de éxito
+      setVentaExitosa(true);
+      
+      // Ocultar la notificación después de 3 segundos
+      setTimeout(() => {
+        setVentaExitosa(false);
+      }, 3000);
+      
+      // Limpiar carrito
+      setCarrito([]);
+      
+      // Cerrar el carrito después de la venta
+      setCarritoAbierto(false);
+    } catch (error) {
+      console.error('Error al realizar la venta:', error);
+      alert(error.message || 'Ocurrió un error al procesar la venta');
+    }
   };
   
   // Calcular total de la venta
@@ -124,8 +154,47 @@ function Ventas() {
   // Calcular total de productos en el carrito
   const totalProductos = carrito.reduce((total, item) => total + item.cantidad, 0);
 
+  // Efecto para manejar la sincronización del carrito con el inventario
+  useEffect(() => {
+    // Verificar si algún producto del carrito ya no está disponible
+    const carritoActualizado = carrito.map(item => {
+      const productoEnInventario = productosEjemplo.find(p => p.id === item.id);
+      if (!productoEnInventario) return null;
+      
+      // Actualizar el stock disponible
+      return {
+        ...item,
+        stock: productoEnInventario.stock,
+        // Si la cantidad en el carrito supera el nuevo stock, ajustarla
+        cantidad: Math.min(item.cantidad, productoEnInventario.stock)
+      };
+    }).filter(Boolean); // Eliminar productos que ya no existen
+    
+    if (carritoActualizado.length !== carrito.length) {
+      setCarrito(carritoActualizado);
+    }
+  }, [productosEjemplo]);
+
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className="container mx-auto px-4 py-6 relative">
+      {/* Notificación de venta exitosa */}
+      {ventaExitosa && (
+        <div className="fixed top-4 right-4 z-50">
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 shadow-lg flex items-start">
+            <CheckCircle className="h-5 w-5 text-green-500 mt-0.5 mr-2 flex-shrink-0" />
+            <div>
+              <p className="font-medium text-green-800">¡Venta registrada con éxito!</p>
+              <p className="text-sm text-green-600">Total: S/ {calcularTotal().toFixed(2)}</p>
+            </div>
+            <button 
+              onClick={() => setVentaExitosa(false)}
+              className="ml-4 text-green-500 hover:text-green-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-4">
           {mostrarProductos && (

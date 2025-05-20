@@ -302,22 +302,35 @@ export const InventarioProvider = ({ children }) => {
     setProductos([...productos, productoConId]);
   };
 
-  const actualizarProducto = (id, datosActualizados) => {
-    setProductos(productos.map(producto => 
-      producto.id === id ? { ...producto, ...datosActualizados } : producto
-    ));
+  const actualizarProducto = (id, productoActualizado) => {
+    setProductos(prevProductos => {
+      const nuevosProductos = prevProductos.map(producto => 
+        producto.id === id ? { ...producto, ...productoActualizado } : producto
+      );
+      localStorage.setItem('inventario-productos', JSON.stringify(nuevosProductos));
+      return nuevosProductos;
+    });
+  };
+
+  const actualizarStock = (id, cantidadVendida) => {
+    setProductos(prevProductos => {
+      const nuevosProductos = prevProductos.map(producto => {
+        if (producto.id === id) {
+          const nuevoStock = (producto.stock || 0) - cantidadVendida;
+          return { 
+            ...producto, 
+            stock: Math.max(0, nuevoStock) // Asegurar que el stock no sea negativo
+          };
+        }
+        return producto;
+      });
+      localStorage.setItem('inventario-productos', JSON.stringify(nuevosProductos));
+      return nuevosProductos;
+    });
   };
 
   const eliminarProducto = (id) => {
     setProductos(productos.filter(producto => producto.id !== id));
-  };
-
-  const actualizarStock = (id, cantidadVendida) => {
-    setProductos(productos.map(producto => 
-      producto.id === id 
-        ? { ...producto, stock: Math.max(0, producto.stock - cantidadVendida) }
-        : producto
-    ));
   };
 
   return (
@@ -333,4 +346,5 @@ export const InventarioProvider = ({ children }) => {
   );
 };
 
+// Exportar el contexto por defecto
 export default InventarioContext;

@@ -29,12 +29,59 @@ const UNIDADES = [
 ];
 
 const FormularioProducto = ({ producto, onChange, onSubmit, onScanClick, hideHeader = false }) => {
-  const [imagenPreview, setImagenPreview] = useState(null);
+  const [imagenPreview, setImagenPreview] = useState(producto.imagen || null);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [errores, setErrores] = useState({});
   const fileInputRef = useRef(null);
+  const [selectedFile, setSelectedFile] = useState(null);
   // El estado del escáner ahora se maneja en el componente padre
+
+  // Manejar cambios en la imagen seleccionada
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validar el tipo de archivo
+    if (!file.type.match('image.*')) {
+      setErrores(prev => ({ ...prev, imagen: 'Por favor, selecciona un archivo de imagen válido' }));
+      return;
+    }
+
+    // Validar el tamaño del archivo (máx 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      setErrores(prev => ({ ...prev, imagen: 'La imagen no debe pesar más de 2MB' }));
+      return;
+    }
+
+    // Limpiar errores de imagen
+    if (errores.imagen) {
+      const newErrors = { ...errores };
+      delete newErrors.imagen;
+      setErrores(newErrors);
+    }
+
+    // Crear vista previa de la imagen
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagenPreview(e.target.result);
+    };
+    reader.readAsDataURL(file);
+    
+    // Guardar el archivo seleccionado
+    setSelectedFile(file);
+    
+    // Actualizar el estado del producto con la nueva imagen
+    const imageName = `producto_${Date.now()}_${file.name}`;
+    onChange({ target: { name: 'imagen', value: `/productos/${imageName}` } });
+  };
+
+  // Manejar la eliminación de la imagen
+  const handleRemoveImage = () => {
+    setImagenPreview(null);
+    setSelectedFile(null);
+    onChange({ target: { name: 'imagen', value: '' } });
+  };
 
   // Efecto para validar precios y stock cuando cambian
   useEffect(() => {
@@ -77,25 +124,30 @@ const FormularioProducto = ({ producto, onChange, onSubmit, onScanClick, hideHea
     if (!producto.unidad?.trim()) nuevosErrores.unidad = 'La unidad es requerida';
     
     // Validación de precios
-    if (!producto.precioCompra || isNaN(producto.precioCompra) || Number(producto.precioCompra) < 0) {
+    const precioCompra = Number(producto.precioCompra || 0);
+    const precioVenta = Number(producto.precioVenta || 0);
+    const stock = Number(producto.stock || 0);
+    const stockMinimo = Number(producto.stockMinimo || 0);
+    
+    if (isNaN(precioCompra) || precioCompra < 0) {
       nuevosErrores.precioCompra = 'Precio de compra inválido';
     }
     
-    if (!producto.precioVenta || isNaN(producto.precioVenta) || Number(producto.precioVenta) < 0) {
+    if (isNaN(precioVenta) || precioVenta < 0) {
       nuevosErrores.precioVenta = 'Precio de venta inválido';
-    } else if (Number(producto.precioVenta) <= Number(producto.precioCompra || 0)) {
+    } else if (precioVenta <= precioCompra) {
       nuevosErrores.precioVenta = 'El precio de venta debe ser mayor al de compra';
     }
     
     // Validación de stock
-    if (producto.stock === '' || isNaN(producto.stock) || !Number.isInteger(Number(producto.stock)) || Number(producto.stock) < 0) {
+    if (isNaN(stock) || !Number.isInteger(stock) || stock < 0) {
       nuevosErrores.stock = 'Stock inválido';
     }
     
     // Validación de stock mínimo
-    if (producto.stockMinimo === '' || isNaN(producto.stockMinimo) || !Number.isInteger(Number(producto.stockMinimo)) || Number(producto.stockMinimo) < 0) {
+    if (isNaN(stockMinimo) || !Number.isInteger(stockMinimo) || stockMinimo < 0) {
       nuevosErrores.stockMinimo = 'Stock mínimo inválido';
-    } else if (Number(producto.stockMinimo) > Number(producto.stock || 0)) {
+    } else if (stockMinimo > stock) {
       nuevosErrores.stockMinimo = 'No puede ser mayor que el stock actual';
     }
 
@@ -108,46 +160,6 @@ const FormularioProducto = ({ producto, onChange, onSubmit, onScanClick, hideHea
     if (validarCampos()) {
       onSubmit(e);
     }
-  };
-
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setIsUploading(true);
-      setUploadProgress(0);
-      
-      // Simular carga de archivo (en un caso real, aquí iría tu lógica de subida)
-      const interval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(interval);
-            return 90; // No llegamos al 100% hasta que termine todo
-          }
-          return prev + 10;
-        });
-      }, 100);
-
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        clearInterval(interval);
-        setUploadProgress(100);
-        setTimeout(() => {
-          setImagenPreview(reader.result);
-          onChange({ target: { name: 'imagen', value: file } });
-          setIsUploading(false);
-          setUploadProgress(0);
-        }, 300);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleRemoveImage = () => {
-    setImagenPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    onChange({ target: { name: 'imagen', value: null } });
   };
 
   const handleSubmit = (e) => {

@@ -1,7 +1,22 @@
-import React from 'react';
-import { X, Plus, Minus } from 'lucide-react';
+import React, { useRef } from 'react';
+import { X, Plus, Minus, Printer, AlertTriangle } from 'lucide-react';
+// Importación temporalmente comentada por problemas de compatibilidad
+// import ReactToPrint from 'react-to-print';
+// Comentado temporalmente por problemas de compatibilidad
+// import { TicketVenta } from './TicketVenta';
 
 const CarritoResumen = ({ items, onUpdateQuantity, onRemoveItem, onCheckout }) => {
+  const ticketRef = useRef();
+  
+  // Generar un número de ticket único
+  const numeroTicket = 'T' + Date.now().toString().slice(-6);
+  const fechaVenta = new Date().toLocaleString('es-PE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
   // Calcular subtotal, IGV y total
   const subtotal = items.reduce((sum, item) => sum + (item.precio * item.cantidad), 0);
   const igv = subtotal * 0.18; // 18% IGV
@@ -9,11 +24,26 @@ const CarritoResumen = ({ items, onUpdateQuantity, onRemoveItem, onCheckout }) =
   
   // Verificar si hay productos sin stock suficiente
   const productosSinStock = items.filter(item => item.cantidad > item.stock);
+  
+  // Función para manejar la finalización de la venta
+  const handleFinalizarVenta = () => {
+    if (productosSinStock.length === 0) {
+      onCheckout();
+    } else {
+      // Mostrar mensaje de error si hay productos sin stock suficiente
+      alert('Hay productos que superan el stock disponible. Por favor, ajuste las cantidades.');
+    }
+  };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
       <div className="p-4 border-b border-gray-100">
-        <h3 className="font-semibold text-gray-800">Resumen de Venta</h3>
+        <div className="flex justify-between items-center">
+          <h3 className="font-semibold text-gray-800">Resumen de Venta</h3>
+          <div className="text-xs text-gray-500">
+            {items.length} {items.length === 1 ? 'producto' : 'productos'}
+          </div>
+        </div>
       </div>
       
       <div className="max-h-96 overflow-y-auto p-4">
@@ -55,39 +85,82 @@ const CarritoResumen = ({ items, onUpdateQuantity, onRemoveItem, onCheckout }) =
         )}
       </div>
 
-      <div className="p-4 border-t border-gray-100">
-        <div className="space-y-2 py-2">
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>Subtotal:</span>
-            <span>S/ {subtotal.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between text-sm text-gray-600">
-            <span>IGV (18%):</span>
-            <span>S/ {igv.toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between font-semibold text-gray-900 border-t border-gray-100 pt-2 mt-2">
-            <span>Total:</span>
-            <span className="text-lg">S/ {total.toFixed(2)}</span>
-          </div>
+      {/* Contenido del ticket (oculto para impresión) - Temporalmente deshabilitado
+      <div className="hidden">
+        <div ref={ticketRef}>
+          <TicketVenta 
+            items={items} 
+            total={total} 
+            fecha={fechaVenta}
+            numeroTicket={numeroTicket}
+          />
         </div>
-
-        <div className="mt-6 space-y-2">
+      </div>
+      */}
+      
+      <div className="bg-gray-50 p-4 border-t border-gray-100 flex-1 flex flex-col">
+        <div className="flex-1">
+          <div className="space-y-2 mb-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Subtotal:</span>
+              <span className="font-medium">S/ {subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">IGV (18%):</span>
+              <span className="font-medium">S/ {igv.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-base font-semibold border-t border-gray-200 pt-2 mt-2">
+              <span>Total:</span>
+              <span className="text-orange-600">S/ {total.toFixed(2)}</span>
+            </div>
+          </div>
+          
           {productosSinStock.length > 0 && (
-            <div className="text-red-500 text-sm mb-2">
-              Algunos productos no tienen suficiente stock disponible.
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 mb-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-5 w-5 text-yellow-400" />
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    Algunos productos superan el stock disponible. Ajuste las cantidades.
+                  </p>
+                </div>
+              </div>
             </div>
           )}
+        </div>
+        
+        <div className="space-y-2">
           <button
-            onClick={onCheckout}
-            className={`w-full py-2 px-4 rounded-lg transition-colors ${
-              items.length === 0 || productosSinStock.length > 0
-                ? 'bg-gray-300 cursor-not-allowed'
-                : 'bg-orange-500 hover:bg-orange-600 text-white'
-            }`}
+            onClick={() => {
+              // Función temporal para simular la impresión
+              console.log('Simulando impresión del ticket...');
+              // Llamar a handleFinalizarVenta después de un breve retraso
+              setTimeout(() => {
+                handleFinalizarVenta();
+              }, 500);
+            }}
             disabled={items.length === 0 || productosSinStock.length > 0}
+            className={`w-full py-2 px-4 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${
+              items.length === 0 || productosSinStock.length > 0
+                ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                : 'bg-blue-500 text-white hover:bg-blue-600'
+            }`}
           >
-            Realizar Venta (S/. {total.toFixed(2)})
+            <Printer className="h-4 w-4" />
+            <span>Finalizar Venta</span>
           </button>
+          
+          {/* Botón de ayuda para depuración */}
+          {process.env.NODE_ENV === 'development' && (
+            <button
+              onClick={() => console.log('Ref de ticket:', ticketRef.current)}
+              className="text-xs text-gray-500 mt-2"
+            >
+              Debug: Ver referencia de ticket
+            </button>
+          )}
         </div>
       </div>
     </div>

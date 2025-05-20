@@ -3,7 +3,7 @@ import React, { useState, useMemo, useContext } from "react";
 import { Modal } from "react-bootstrap";
 import { Search, Plus, Barcode, CheckCircle2 as CheckCircle, XCircle, Package, ShoppingCart } from 'lucide-react';
 import { useSearch } from "../context/SearchContext";
-import { InventarioContext } from "../context/InventarioContext";
+import InventarioContext from "../context/InventarioContext";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import FormularioProducto from "../components/FormularioProducto";
@@ -62,21 +62,32 @@ const Inventario = () => {
   const [nuevoProducto, setNuevoProducto] = useState({
     nombre: "", 
     categoria: "Abarrotes", 
-    precioCompra: "", 
-    precioVenta: "", 
+    precioCompra: 0, 
+    precioVenta: 0, 
     unidad: "unidad", 
-    stock: "",
-    stockMinimo: "",
+    stock: 0,
+    stockMinimo: 0,
     codigoBarras: ""
   });
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-    // Convertir a número si el campo es numérico
-    const processedValue = ['precioCompra', 'precioVenta', 'cantidad'].includes(name) 
-      ? value === '' ? '' : Number(value)
-      : value;
-      
+    
+    // Determinar si el campo es numérico
+    const isNumericField = ['precioCompra', 'precioVenta', 'stock', 'stockMinimo'].includes(name);
+    
+    // Procesar el valor según el tipo de campo
+    let processedValue = value;
+    
+    if (isNumericField) {
+      // Permitir cadena vacía o convertir a número
+      processedValue = value === '' ? 0 : Number(value);
+      // Si el resultado no es un número válido, mantener el valor anterior
+      if (isNaN(processedValue)) {
+        processedValue = productoEdit ? (productoEdit[name] || 0) : (nuevoProducto[name] || 0);
+      }
+    }
+    
     if (productoEdit) {
       setProductoEdit((prev) => ({ ...prev, [name]: processedValue }));
     } else {
@@ -93,26 +104,57 @@ const Inventario = () => {
 
   const handleSaveChanges = async () => {
     try {
-      await actualizarProducto(productoEdit);
+      // Crear una copia del producto editado
+      const productoActualizado = { ...productoEdit };
+      
+      // Si hay una nueva imagen, manejarla antes de guardar
+      if (productoEdit.imagen && productoEdit.imagen instanceof File) {
+        // En un entorno real, aquí subirías la imagen a un servidor
+        // Por ahora, solo usamos el nombre del archivo como referencia
+        const imageName = `producto_${Date.now()}_${productoEdit.imagen.name}`;
+        productoActualizado.imagen = `/productos/${imageName}`;
+        
+        // Aquí iría la lógica para subir el archivo al servidor
+        // Por ejemplo: await subirImagen(productoEdit.imagen, imageName);
+      }
+      
+      // Actualizar el producto en el inventario
+      await actualizarProducto(productoActualizado);
+      
+      // Cerrar el modal y mostrar mensaje de éxito
       handleCloseModal();
       toast.success('Producto actualizado correctamente');
     } catch (error) {
       console.error('Error al actualizar el producto:', error);
-      toast.error('Error al actualizar el producto');
+      toast.error('Error al actualizar el producto: ' + (error.message || 'Error desconocido'));
     }
   };
 
   const handleAddProducto = async (e) => {
     e.preventDefault();
     try {
+      // Crear un nuevo objeto de producto con los datos del formulario
       const newProduct = { 
         ...nuevoProducto,
         precioCompra: parseFloat(nuevoProducto.precioCompra),
         precioVenta: parseFloat(nuevoProducto.precioVenta),
         stock: parseInt(nuevoProducto.stock, 10),
         stockMinimo: parseInt(nuevoProducto.stockMinimo, 10) || 0,
+        // La imagen ya debería estar en nuevoProducto.imagen
       };
       
+      // Si hay una imagen, la manejamos antes de guardar
+      if (nuevoProducto.imagen && nuevoProducto.imagen instanceof File) {
+        // En un entorno real, aquí subirías la imagen a un servidor
+        // Por ahora, solo usamos el nombre del archivo como referencia
+        const imageName = `producto_${Date.now()}_${nuevoProducto.imagen.name}`;
+        newProduct.imagen = `/productos/${imageName}`;
+        
+        // Aquí iría la lógica para subir el archivo al servidor
+        // Por ejemplo: await subirImagen(nuevoProducto.imagen, imageName);
+      }
+      
+      // Agregar el producto al inventario
       await agregarProducto(newProduct);
       
       // Resetear el formulario
@@ -124,7 +166,8 @@ const Inventario = () => {
         unidad: "unidad", 
         stock: "",
         stockMinimo: "",
-        codigoBarras: ""
+        codigoBarras: "",
+        imagen: ""
       });
       
       toast.success('Producto agregado correctamente');
