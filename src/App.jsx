@@ -6,6 +6,7 @@ import Layout from './components/Layout';
 import Ventas from './pages/Ventas';
 import Inventario from './pages/Inventario';
 import Historial from './pages/Historial';
+import Clientes from './pages/Clientes';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/ventas" element={<Ventas />} />
           <Route path="/inventario" element={<Inventario />} />
           <Route path="/historial" element={<Historial />} />
+          <Route path="/clientes" element={<Clientes />} />
         </Routes>
       </Layout>
       <ToastContainer 
