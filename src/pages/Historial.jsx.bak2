@@ -1,41 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Filter as FilterIcon, Download, RefreshCw, BarChart2, FileText, AlertTriangle, Undo2, Calendar } from 'lucide-react';
+import { Search, Filter as FilterIcon, Download, RefreshCw, BarChart2, FileText, AlertTriangle, Undo2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-
-// Estilos globales para los inputs
-const globalInputStyles = `
-  /* Estilos para inputs enfocados */
-  input:focus, 
-  select:focus,
-  input[type="date"]:focus,
-  input[type="text"]:focus {
-    border-color: #f59e0b !important;
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.2) !important;
-    outline: none !important;
-    transition: all 0.2s ease-in-out;
-  }
-  
-  /* Estilos para los inputs de fecha */
-  input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.5) sepia(1) saturate(5) hue-rotate(0deg) brightness(0.9);
-    cursor: pointer;
-    opacity: 1;
-  }
-  
-  input[type="date"] {
-    position: relative;
-  }
-  
-  input[type="date"]::before {
-    content: '';
-    position: absolute;
-    right: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    pointer-events: none;
-  }
-`;
 
 // Datos de ejemplo para el historial
 const datosHistorial = [
@@ -145,14 +111,6 @@ const Historial = () => {
     }
   };
 
-  // Agregar estilos globales al head del documento
-  React.useEffect(() => {
-    const style = document.createElement('style');
-    style.textContent = globalInputStyles;
-    document.head.appendChild(style);
-    return () => document.head.removeChild(style);
-  }, []);
-
   return (
     <div className="flex flex-col space-y-6 p-4 h-full">
       {/* Título con estilo consistente */}
@@ -210,54 +168,32 @@ const Historial = () => {
       <div className="bg-white p-4 rounded-lg shadow">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 pb-1 border-b-2 border-orange-500 inline-block">Fecha Inicio</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Inicio</label>
             <input
               type="date"
               name="fechaInicio"
               value={filtros.fechaInicio}
               onChange={handleFiltroChange}
-              className="w-full p-2 pr-8 border rounded-md appearance-none"
-              style={{
-                backgroundImage: "url(" + encodeURI("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E") + ")",
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 0.5rem center',
-                backgroundSize: '1rem 1rem'
-              }}
+              className="w-full p-2 border rounded-md"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 pb-1 border-b-2 border-orange-500 inline-block">Fecha Fin</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Fecha Fin</label>
             <input
               type="date"
               name="fechaFin"
               value={filtros.fechaFin}
               onChange={handleFiltroChange}
-              className="w-full p-2 pr-8 border rounded-md appearance-none"
-              style={{
-                backgroundImage: "url(" + encodeURI("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23f59e0b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2' ry='2'%3E%3C/rect%3E%3Cline x1='16' y1='2' x2='16' y2='6'%3E%3C/line%3E%3Cline x1='8' y1='2' x2='8' y2='6'%3E%3C/line%3E%3Cline x1='3' y1='10' x2='21' y2='10'%3E%3C/line%3E%3C/svg%3E") + ")",
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 0.5rem center',
-                backgroundSize: '1rem 1rem'
-              }}
+              className="w-full p-2 border rounded-md"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 pb-1 border-b-2 border-orange-500 inline-block">Tipo de Movimiento</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Tipo de Movimiento</label>
             <select
               name="tipoMovimiento"
               value={filtros.tipoMovimiento}
               onChange={handleFiltroChange}
-              className="w-full p-2 pr-8 border rounded-md appearance-none bg-white hover:bg-orange-50 focus:bg-orange-50 text-orange-700 focus:ring-2 focus:ring-orange-200 focus:border-orange-500 transition-colors focus:outline-none"
-              style={{
-                backgroundImage: "url(" + encodeURI("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23d97706' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") + ")",
-                backgroundRepeat: 'no-repeat',
-                backgroundPosition: 'right 0.5rem center',
-                backgroundSize: '1rem 1rem',
-                cursor: 'pointer',
-                color: '#9a3412',
-                borderColor: '#f59e0b',
-                outline: 'none'
-              }}
+              className="w-full p-2 border rounded-md"
             >
               <option value="">Todos</option>
               <option value="Venta">Venta</option>
@@ -267,7 +203,7 @@ const Historial = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1 pb-1 border-b-2 border-orange-500 inline-block">Buscar</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Buscar</label>
             <div className="relative">
               <input
                 type="text"
@@ -275,18 +211,18 @@ const Historial = () => {
                 value={filtros.busqueda}
                 onChange={handleFiltroChange}
                 placeholder="Producto o SKU"
-                className="w-full pr-10 p-2 border rounded-md focus:border-orange-500 focus:ring-2 focus:ring-orange-200 transition-colors focus:outline-none"
+                className="w-full pl-10 p-2 border rounded-md"
               />
-              <Search className="absolute right-3 top-2.5 h-4 w-4 text-orange-500" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
             </div>
           </div>
         </div>
         <div className="flex justify-between items-center">
           <button
             onClick={resetFiltros}
-            className="flex items-center text-sm text-gray-600 hover:text-gray-800 transition-colors group"
+            className="flex items-center text-sm text-gray-600 hover:text-gray-800"
           >
-            <RefreshCw className="w-4 h-4 mr-1 text-orange-500 group-hover:text-orange-600 transition-colors" />
+            <RefreshCw className="w-4 h-4 mr-1" />
             Restablecer filtros
           </button>
           <div className="flex space-x-2">
@@ -301,9 +237,6 @@ const Historial = () => {
               className={`px-3 py-1.5 rounded-md text-sm ${vista === 'resumen' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'}`}
             >
               Resumen
-            </button>
-          </div>
-        </div>
       </div>
 
       {/* Contenido principal */}
@@ -361,11 +294,10 @@ const Historial = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
                         onClick={() => deshacerMovimiento(movimiento.id)}
-                        className="text-yellow-600 hover:text-yellow-900 mr-3 flex items-center"
+                        className="text-yellow-600 hover:text-yellow-900 mr-3"
                         title="Deshacer movimiento"
                       >
-                        <Undo2 className="w-4 h-4 mr-1" />
-                        Deshacer
+                        <Undo2 className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>
@@ -394,6 +326,87 @@ const Historial = () => {
                     <span className="text-sm text-gray-500">{producto.cantidad} unidades</span>
                   </div>
                 ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Historial;
+                        movimiento.tipo === 'Venta' ? 'bg-red-100 text-red-800' :
+                        movimiento.tipo === 'Compra' ? 'bg-green-100 text-green-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {movimiento.tipo}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{movimiento.producto}</div>
+                      <div className="text-sm text-gray-500">{movimiento.sku}</div>
+                    </td>
+                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${
+                      movimiento.cantidad > 0 ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {movimiento.cantidad > 0 ? `+${movimiento.cantidad}` : movimiento.cantidad}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      S/ {movimiento.precioUnitario.toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      S/ {Math.abs(movimiento.total).toFixed(2)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {movimiento.usuario}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => deshacerMovimiento(movimiento.id)}
+                        className="text-yellow-600 hover:text-yellow-900 flex items-center"
+                        title="Deshacer movimiento"
+                      >
+                        <Undo2 className="w-4 h-4 mr-1" />
+                        Deshacer
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white p-6 rounded-lg shadow">
+          <h3 className="text-lg font-medium text-gray-900 mb-4">Resumen de Movimientos</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h4 className="font-medium text-gray-700 mb-2">Productos más movidos</h4>
+              <div className="space-y-2">
+                {resumen.productosMasMovidos.map((producto, index) => (
+                  <div key={index} className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">{producto.nombre}</span>
+                    <span className="text-sm font-medium">{producto.cantidad} unidades</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-700 mb-2">Distribución por tipo</h4>
+              <div className="h-40 flex items-end space-x-2">
+                <div className="flex flex-col items-center">
+                  <div className="w-8 bg-red-500 rounded-t" style={{ height: '60%' }}></div>
+                  <span className="text-xs mt-1">Ventas</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-8 bg-green-500 rounded-t" style={{ height: '30%' }}></div>
+                  <span className="text-xs mt-1">Compras</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="w-8 bg-yellow-500 rounded-t" style={{ height: '10%' }}></div>
+                  <span className="text-xs mt-1">Ajustes</span>
+                </div>
               </div>
             </div>
           </div>

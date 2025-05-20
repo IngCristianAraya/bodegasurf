@@ -8,7 +8,7 @@ import {
   ClipboardList,
   Truck,
   Info,
-} from "lucide-react";
+} from "lucide-react/dist/esm/icons";
 
 const Sidebar = () => {
   const [active, setActive] = useState("ventas");

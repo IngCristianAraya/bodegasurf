@@ -1,7 +1,7 @@
 // pages/Inventario.jsx
 import React, { useState, useMemo } from "react";
 import { Modal } from "react-bootstrap";
-import { Search, Plus, Barcode, CheckCircle, XCircle, Package, ShoppingCart } from 'lucide-react';
+import { Search, Plus, Barcode, CheckCircle2 as CheckCircle, XCircle, Package, ShoppingCart } from 'lucide-react';
 import { useSearch } from "../context/SearchContext";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
