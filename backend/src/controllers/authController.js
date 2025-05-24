@@ -1,15 +1,23 @@
-const { StatusCodes } = require('http-status-codes');
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
-const User = require('../models/User');
-const { 
-  JWT_SECRET, 
-  JWT_EXPIRE, 
-  JWT_COOKIE_EXPIRE = '30',
-  NODE_ENV = 'development',
-  FRONTEND_URL = 'http://localhost:3000'
-} = require('../config/config');
-const { sendEmail } = require('../utils/email');
+import { StatusCodes } from 'http-status-codes';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
+import User from '../models/User.js';
+import {
+  JWT_SECRET as JWT_SECRET_ENV,
+  JWT_EXPIRE as JWT_EXPIRE_ENV,
+  JWT_COOKIE_EXPIRE as JWT_COOKIE_EXPIRE_ENV,
+  NODE_ENV as NODE_ENV_ENV,
+  FRONTEND_URL as FRONTEND_URL_ENV
+} from '../config/config.js';
+import { sendWelcomeEmail } from '../utils/email.js';
+import { AppError } from '../types/errors.js';
+
+// Asignar valores predeterminados
+const JWT_SECRET = JWT_SECRET_ENV || 'TuClaveSecretaMuySegura123!';
+const JWT_EXPIRE = JWT_EXPIRE_ENV || '30d';
+const JWT_COOKIE_EXPIRE_DAYS = parseInt(JWT_COOKIE_EXPIRE_ENV || '30', 10); // Parseado a Int y renombrado
+const NODE_ENV = NODE_ENV_ENV || 'development';
+const FRONTEND_URL = FRONTEND_URL_ENV || 'http://localhost:3000';
 
 // Importar tipos para JSDoc
 /**
@@ -28,9 +36,6 @@ if (!JWT_EXPIRE) {
   throw new Error('JWT_EXPIRE no está definido en la configuración');
 }
 
-// Usar la clase AuthError de types/errors
-const { AuthError } = require('../types/errors');
-
 /**
  * Genera un token JWT para un usuario
  * @param {string | import('mongoose').Types.ObjectId} id - ID del usuario
@@ -41,7 +46,7 @@ const generateToken = (id) => {
   if (!JWT_SECRET) {
     throw new Error('JWT_SECRET no está configurado');
   }
-  
+
   return jwt.sign(
     { id: id.toString() },
     JWT_SECRET,
@@ -59,15 +64,13 @@ const generateToken = (id) => {
 const sendTokenResponse = (user, statusCode, res) => {
   try {
     const token = generateToken(user._id);
-    
-    // Calcular la fecha de expiración de la cookie
     const cookieExpires = new Date();
-    cookieExpires.setDate(cookieExpires.getDate() + parseInt(JWT_COOKIE_EXPIRE, 10));
+    cookieExpires.setDate(cookieExpires.getDate() + JWT_COOKIE_EXPIRE_DAYS); // Usar constante parseada
 
     const options = {
       expires: cookieExpires,
       httpOnly: true,
-      secure: NODE_ENV === 'production',
+      secure: NODE_ENV === 'production', // Usar constante NODE_ENV
       sameSite: NODE_ENV === 'production' ? 'none' : 'lax'
     };
 
@@ -117,7 +120,7 @@ const register = async (req, res, next) => {
 
     // Validar campos requeridos
     if (!name || !email || !password) {
-      throw new AuthError(
+      throw new AppError(
         'Por favor proporcione nombre, correo electrónico y contraseña',
         StatusCodes.BAD_REQUEST,
         'MISSING_FIELDS'
@@ -127,7 +130,7 @@ const register = async (req, res, next) => {
     // Validar formato de correo electrónico
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      throw new AuthError(
+      throw new AppError(
         'Por favor proporcione un correo electrónico válido',
         StatusCodes.BAD_REQUEST,
         'INVALID_EMAIL'
@@ -136,7 +139,7 @@ const register = async (req, res, next) => {
 
     // Validar fortaleza de la contraseña
     if (password.length < 6) {
-      throw new AuthError(
+      throw new AppError(
         'La contraseña debe tener al menos 6 caracteres',
         StatusCodes.BAD_REQUEST,
         'WEAK_PASSWORD'
@@ -146,7 +149,7 @@ const register = async (req, res, next) => {
     // Verificar si el usuario ya existe
     const userExists = await User.findOne({ email });
     if (userExists) {
-      throw new AuthError(
+      throw new AppError(
         'El correo electrónico ya está registrado',
         StatusCodes.BAD_REQUEST,
         'EMAIL_EXISTS'
@@ -164,7 +167,6 @@ const register = async (req, res, next) => {
 
     // Enviar correo de bienvenida
     try {
-      const { sendWelcomeEmail } = require('../utils/email');
       await sendWelcomeEmail(user.email, user.name);
     } catch (emailError) {
       console.error('Error al enviar correo de bienvenida:', emailError);
@@ -174,7 +176,7 @@ const register = async (req, res, next) => {
     // Enviar respuesta con token
     sendTokenResponse(user, StatusCodes.CREATED, res);
 
-    console.log('Datos extraídos del cuerpo:', JSON.stringify({ 
+    console.log('Datos extraídos del cuerpo:', JSON.stringify({
       name: name ? 'presente' : 'ausente',
       email: email ? 'presente' : 'ausente',
       password: password ? 'presente' : 'ausente',
@@ -182,80 +184,6 @@ const register = async (req, res, next) => {
       tenantId
     }, null, 2));
 
-    // Validar que el nombre no esté vacío después del trim
-    if (name.trim() === '') {
-      throw new AppError(
-        'El nombre no puede estar vacío',
-        StatusCodes.BAD_REQUEST,
-        'INVALID_NAME'
-      );
-    }
-
-    // Validar que el correo electrónico no esté vacío después del trim
-    if (email.trim() === '') {
-      throw new AppError(
-        'El correo electrónico no puede estar vacío',
-        StatusCodes.BAD_REQUEST,
-        'INVALID_EMAIL'
-      );
-    }
-
-    // Validar que la contraseña no esté vacía después del trim
-    if (password.trim() === '') {
-      throw new AppError(
-        'La contraseña no puede estar vacía',
-        StatusCodes.BAD_REQUEST,
-        'INVALID_PASSWORD'
-      );
-    }
-
-    // Verificar si el usuario ya existe
-    const userExists = await UserModel.findOne({ email });
-    if (userExists) {
-      throw new AppError(
-        'El correo electrónico ya está en uso',
-        StatusCodes.CONFLICT,
-        'EMAIL_ALREADY_EXISTS'
-      );
-    }
-
-    // Crear usuario
-    const user = await UserModelWithTypes.create({
-      name,
-      email,
-      password,
-      role: role || 'user',
-      tenantId,
-      isActive: true
-    });
-
-    // Crear token
-    const token = generateToken(user._id, user.tenantId, user.role);
-
-    // Configurar cookie
-    const cookieOptions = {
-      expires: new Date(
-        Date.now() + (process.env.JWT_COOKIE_EXPIRE || 30) * 24 * 60 * 60 * 1000
-      ),
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-    };
-
-    // Enviar respuesta
-    res
-      .status(StatusCodes.CREATED)
-      .cookie('token', token, cookieOptions)
-      .json({
-        success: true,
-        token,
-        user: {
-          id: user._id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          tenantId: user.tenantId,
-        },
-      });
   } catch (error) {
     next(error);
   }
@@ -269,38 +197,64 @@ const register = async (req, res, next) => {
  * @param {AuthResponse} res
  * @param {AuthNextFunction} next
  */
-const login = async (req: AuthRequest, res: AuthResponse, next: AuthNextFunction) => {
+const login = async (req, res, next) => {
+  console.log('Intento de login recibido');
   try {
     const { email, password } = req.body;
+    console.log(`Login - Email recibido: ${email}`);
+    console.log(`Login - Password recibido: ${password ? '****** (presente)' : '(ausente)'}`);
 
-    // Verificar email y contraseña
-    const user = await UserModelWithTypes.findOne({ email }).select('+password');
-    
-    if (!user || !(await user.matchPassword(password))) {
+    if (!email || !password) {
+      console.log('Login - Email o password ausentes en req.body');
+      return res.status(StatusCodes.BAD_REQUEST).json({
+        success: false,
+        message: 'Por favor ingrese email y contraseña',
+      });
+    }
+
+    const user = await User.findOne({ email }).select('+password');
+    console.log('Login - Usuario encontrado en BD:', user ? user.email : 'No encontrado');
+
+    if (user) {
+      console.log('Login - Hash de contraseña en BD:', user.password); // Loguear hash para depuración
+    }
+
+    if (!user) {
+      console.log('Login - Usuario no encontrado o contraseña no coincide (usuario nulo)');
       return res.status(StatusCodes.UNAUTHORIZED).json({
         success: false,
         message: 'Credenciales inválidas',
       });
     }
 
-    // Verificar si el usuario está activo
+    const isMatch = await user.matchPassword(password);
+    console.log('Login - Resultado de matchPassword:', isMatch);
+
+    if (!isMatch) {
+      console.log('Login - Usuario no encontrado o contraseña no coincide (isMatch false)');
+      return res.status(StatusCodes.UNAUTHORIZED).json({
+        success: false,
+        message: 'Credenciales inválidas',
+      });
+    }
+
     if (!user.isActive) {
+      console.log('Login - Cuenta desactivada para:', user.email);
       return res.status(StatusCodes.UNAUTHORIZED).json({
         success: false,
         message: 'Cuenta desactivada. Contacte al administrador.',
       });
     }
 
-    // Crear token
-    const token = generateToken(user._id, user.tenantId, user.role);
+    console.log('Login - Autenticación exitosa para:', user.email);
+    const token = generateToken(user._id);
 
-    // Configurar cookie
     const cookieOptions = {
       expires: new Date(
-        Date.now() + (process.env.JWT_COOKIE_EXPIRE || 30) * 24 * 60 * 60 * 1000
+        Date.now() + JWT_COOKIE_EXPIRE_DAYS * 24 * 60 * 60 * 1000 // Usar constante parseada
       ),
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      secure: NODE_ENV === 'production', // Usar constante NODE_ENV
     };
 
     // Enviar respuesta
@@ -316,6 +270,7 @@ const login = async (req: AuthRequest, res: AuthResponse, next: AuthNextFunction
       },
     });
   } catch (error) {
+    console.error('Login - Error en el bloque try-catch:', error);
     next(error);
   }
 };
@@ -327,7 +282,7 @@ const login = async (req: AuthRequest, res: AuthResponse, next: AuthNextFunction
  * @param {AuthRequest} req
  * @param {AuthResponse} res
  */
-const logout = (req: AuthRequest, res: AuthResponse) => {
+const logout = (req, res) => {
   res.cookie('token', 'none', {
     expires: new Date(Date.now() + 10 * 1000),
     httpOnly: true,
@@ -347,9 +302,9 @@ const logout = (req: AuthRequest, res: AuthResponse) => {
  * @param {AuthResponse} res
  * @param {AuthNextFunction} next
  */
-const getMe = async (req: AuthRequest, res: AuthResponse, next: AuthNextFunction) => {
+const getMe = async (req, res, next) => {
   try {
-    const user = await UserModelWithTypes.findById(req.user.id);
+    const user = await User.findById(req.user.id);
 
     res.status(StatusCodes.OK).json({
       success: true,
@@ -368,11 +323,11 @@ const getMe = async (req: AuthRequest, res: AuthResponse, next: AuthNextFunction
  * @param {AuthResponse} res
  * @param {AuthNextFunction} next
  */
-const updateDetails = async (req: AuthRequest, res: AuthResponse, next: AuthNextFunction) => {
+const updateDetails = async (req, res, next) => {
   try {
     const { name, email } = req.body;
 
-    const user = await UserModelWithTypes.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
       req.user.id,
       { name, email },
       {
@@ -398,9 +353,9 @@ const updateDetails = async (req: AuthRequest, res: AuthResponse, next: AuthNext
  * @param {AuthResponse} res
  * @param {AuthNextFunction} next
  */
-const updatePassword = async (req: AuthRequest, res: AuthResponse, next: AuthNextFunction) => {
+const updatePassword = async (req, res, next) => {
   try {
-    const user = await UserModelWithTypes.findById(req.user.id).select('+password');
+    const user = await User.findById(req.user.id).select('+password');
 
     // Verificar contraseña actual
     if (!(await user.matchPassword(req.body.currentPassword))) {
@@ -414,7 +369,7 @@ const updatePassword = async (req: AuthRequest, res: AuthResponse, next: AuthNex
     await user.save();
 
     // Crear token
-    const token = generateToken(user._id, user.tenantId, user.role);
+    const token = generateToken(user._id);
 
     res.status(StatusCodes.OK).json({
       success: true,
@@ -434,9 +389,9 @@ const updatePassword = async (req: AuthRequest, res: AuthResponse, next: AuthNex
  * @param {AuthResponse} res
  * @param {AuthNextFunction} next
  */
-const forgotPassword = async (req: AuthRequest, res: AuthResponse, next: AuthNextFunction) => {
+const forgotPassword = async (req, res, next) => {
   try {
-    const user = await UserModelWithTypes.findOne({ email: req.body.email });
+    const user = await User.findOne({ email: req.body.email });
 
     if (!user) {
       return res.status(StatusCodes.NOT_FOUND).json({
@@ -470,10 +425,10 @@ const forgotPassword = async (req: AuthRequest, res: AuthResponse, next: AuthNex
  * @param {AuthResponse} res
  * @param {AuthNextFunction} next
  */
-const resetPassword = async (req: AuthRequest, res: AuthResponse, next: AuthNextFunction) => {
+const resetPassword = async (req, res, next) => {
   try {
     // Obtener usuario por token
-    const user = await UserModelWithTypes.findOne({
+    const user = await User.findOne({
       resetPasswordToken: req.params.resettoken,
       resetPasswordExpire: { $gt: Date.now() },
     });
@@ -493,7 +448,7 @@ const resetPassword = async (req: AuthRequest, res: AuthResponse, next: AuthNext
     await user.save();
 
     // Crear token
-    const token = generateToken(user._id, user.tenantId, user.role);
+    const token = generateToken(user._id);
 
     res.status(StatusCodes.OK).json({
       success: true,

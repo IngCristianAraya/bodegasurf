@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Filter as FilterIcon, Download, RefreshCw, BarChart2, FileText, AlertTriangle, Undo2, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useQuery } from '@tanstack/react-query';
+import api from '../config/axios';
 
 // Estilos globales para los inputs
 const globalInputStyles = `
@@ -37,35 +39,6 @@ const globalInputStyles = `
   }
 `;
 
-// Datos de ejemplo para el historial
-const datosHistorial = [
-  {
-    id: 1,
-    fecha: new Date(2023, 4, 15, 10, 30),
-    tipo: 'Venta',
-    producto: 'Leche Gloria Deslactosada 1L',
-    sku: 'LG-001',
-    cantidad: 2,
-    precioUnitario: 4.50,
-    total: 9.00,
-    usuario: 'admin',
-    notas: 'Venta normal'
-  },
-  {
-    id: 2,
-    fecha: new Date(2023, 4, 15, 11, 15),
-    tipo: 'Ajuste',
-    producto: 'Arroz Costeño 5kg',
-    sku: 'AR-005',
-    cantidad: -5,
-    precioUnitario: 18.50,
-    total: -92.50,
-    usuario: 'admin',
-    notas: 'Ajuste por inventario físico'
-  },
-  // Agrega más datos según sea necesario
-];
-
 const Historial = () => {
   const [filtros, setFiltros] = useState({
     fechaInicio: '',
@@ -76,36 +49,98 @@ const Historial = () => {
   });
   const [vista, setVista] = useState('tabla'); // 'tabla' o 'resumen'
 
+  const fetchTransactions = async ({ queryKey }) => {
+    // eslint-disable-next-line no-unused-vars
+    const [_key, { page = 1, limit = 100, status }] = queryKey;
+    const params = { page, limit };
+    if (status) params.status = status;
+    const { data } = await api.get('/transactions', { params });
+    return data;
+  };
+
+  const {
+    data: transaccionesData,
+    isLoading,
+    isError,
+    error,
+    refetch
+  } = useQuery({
+    queryKey: ['transactions', { page: 1, limit: 100 }],
+    queryFn: fetchTransactions,
+    keepPreviousData: true,
+    // select: (data) => data.data.map(t => ({ ...t, fecha: new Date(t.createdAt), producto: t.items[0]?.product?.name, ... })) 
+  });
+
+  const historialReal = useMemo(() => transaccionesData?.data || [], [transaccionesData]);
+
   // Filtrar datos según los filtros aplicados
   const datosFiltrados = useMemo(() => {
-    return datosHistorial.filter(item => {
-      const cumpleFiltroFecha = !filtros.fechaInicio || item.fecha >= new Date(filtros.fechaInicio);
-      const cumpleTipo = !filtros.tipoMovimiento || item.tipo === filtros.tipoMovimiento;
-      const cumpleBusqueda = !filtros.busqueda || 
-        item.producto.toLowerCase().includes(filtros.busqueda.toLowerCase()) ||
-        item.sku.toLowerCase().includes(filtros.busqueda.toLowerCase());
-      
+    if (!historialReal) return [];
+    return historialReal.filter(item => {
+      let fechaItem;
+      try {
+        fechaItem = new Date(item.createdAt);
+      } catch (e) {
+        console.error("Error parsing date from item:", item, e);
+        return false;
+      }
+
+      const cumpleFiltroFecha = (!filtros.fechaInicio || fechaItem >= new Date(filtros.fechaInicio)) &&
+        (!filtros.fechaFin || fechaItem <= new Date(filtros.fechaFin));
+
+      let cumpleTipo = true;
+      if (filtros.tipoMovimiento) {
+        // La API tiene item.status ('pending', 'completed', 'cancelled', 'failed')
+        // El filtro actual busca 'Venta', 'Ajuste', etc.
+        // Esto necesitará un mapeo o una reconsideración de los tipos de filtro.
+        // Por ahora, si el filtro es 'Venta', asumimos que es una transacción 'completed'.
+        // Otros tipos como 'Ajuste' no tienen un equivalente directo en la transacción.
+        if (filtros.tipoMovimiento === 'Venta' && item.status !== 'completed') {
+          cumpleTipo = false;
+        } else if (filtros.tipoMovimiento === 'Cancelado' && item.status !== 'cancelled') {
+          cumpleTipo = false;
+        } else if (filtros.tipoMovimiento && !['Venta', 'Cancelado'].includes(filtros.tipoMovimiento)) {
+          // Si es un tipo de filtro no mapeado, por ahora no filtra nada para ese tipo.
+          // Podríamos necesitar un campo 'type' en el modelo Transaction para esto.
+        }
+      }
+
+      const cumpleBusqueda = !filtros.busqueda ||
+        (item.items && item.items.some(prodItem =>
+          prodItem.product?.name?.toLowerCase().includes(filtros.busqueda.toLowerCase()) ||
+          prodItem.sku?.toLowerCase().includes(filtros.busqueda.toLowerCase()) // Asumiendo que los items tienen sku
+        )) ||
+        (item.metadata?.description?.toLowerCase().includes(filtros.busqueda.toLowerCase())) ||
+        (item._id?.toLowerCase().includes(filtros.busqueda.toLowerCase())); // Buscar por ID de transacción
+
       return cumpleFiltroFecha && cumpleTipo && cumpleBusqueda;
     });
-  }, [filtros]);
+  }, [filtros, historialReal]);
 
   // Calcular resúmenes
   const resumen = useMemo(() => {
+    if (!datosFiltrados) return { totalMovimientos: 0, ingresos: 0, productosMasMovidos: [] };
     return {
       totalMovimientos: datosFiltrados.length,
       ingresos: datosFiltrados
-        .filter(item => item.tipo === 'Venta' && item.total > 0)
-        .reduce((sum, item) => sum + item.total, 0),
+        .filter(item => item.status === 'completed' && item.amount > 0)
+        .reduce((sum, item) => sum + item.amount, 0),
       productosMasMovidos: datosFiltrados
         .reduce((acc, item) => {
-          const existente = acc.find(p => p.sku === item.sku);
-          if (existente) {
-            existente.cantidad += Math.abs(item.cantidad);
-          } else {
-            acc.push({
-              sku: item.sku,
-              nombre: item.producto,
-              cantidad: Math.abs(item.cantidad)
+          if (item.items) {
+            item.items.forEach(prodItem => {
+              if (prodItem.product) {
+                const sku = prodItem.sku || prodItem.product._id; // Usar SKU del item o ID del producto
+                const nombre = prodItem.product.name;
+                const cantidad = Math.abs(prodItem.quantity);
+
+                const existente = acc.find(p => p.sku === sku);
+                if (existente) {
+                  existente.cantidad += cantidad;
+                } else {
+                  acc.push({ sku, nombre, cantidad });
+                }
+              }
             });
           }
           return acc;
@@ -131,27 +166,52 @@ const Historial = () => {
       busqueda: '',
       usuario: ''
     });
+    refetch(); // Volver a cargar los datos sin filtros (o con los filtros por defecto de la API)
   };
 
   const exportarAExcel = () => {
-    // Lógica para exportar a Excel
-    alert('Exportando a Excel...');
+    // Lógica para exportar a Excel (usando datosFiltrados)
+    // Implementación futura
+    alert('Exportando a Excel... (funcionalidad pendiente)');
   };
 
   const deshacerMovimiento = (id) => {
-    // Lógica para deshacer movimiento
-    if (window.confirm('¿Estás seguro de deshacer este movimiento?')) {
-      alert(`Deshaciendo movimiento ${id}...`);
+    // La API actual tiene PUT /:id/cancel y PUT /:id/status
+    // Esto requeriría una mutación con React Query.
+    // Implementación futura.
+    if (window.confirm('¿Estás seguro de deshacer este movimiento? (Funcionalidad pendiente)')) {
+      alert(`Deshaciendo movimiento ${id}... (funcionalidad pendiente)`);
     }
   };
 
   // Agregar estilos globales al head del documento
-  React.useEffect(() => {
+  useEffect(() => {
     const style = document.createElement('style');
     style.textContent = globalInputStyles;
     document.head.appendChild(style);
     return () => document.head.removeChild(style);
   }, []);
+
+  if (isLoading) return (
+    <div className="flex justify-center items-center h-full">
+      <p className="text-xl text-gray-600">Cargando historial...</p>
+      {/* Aquí podrías poner un spinner más elaborado */}
+    </div>
+  );
+
+  if (isError) return (
+    <div className="flex flex-col justify-center items-center h-full p-4">
+      <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
+      <p className="text-xl text-red-600">Error cargando historial:</p>
+      <p className="text-md text-red-500">{error.message}</p>
+      <button
+        onClick={() => refetch()}
+        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+      >
+        Reintentar
+      </button>
+    </div>
+  );
 
   return (
     <div className="flex flex-col space-y-6 p-4 h-full">
@@ -325,42 +385,41 @@ const Historial = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {datosFiltrados.map((movimiento) => (
-                  <tr key={movimiento.id} className="hover:bg-gray-50">
+                  <tr key={movimiento._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(movimiento.fecha, "dd/MM/yyyy HH:mm", { locale: es })}
+                      {format(new Date(movimiento.createdAt), "dd/MM/yyyy HH:mm", { locale: es })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        movimiento.tipo === 'Venta' ? 'bg-red-100 text-red-800' :
-                        movimiento.tipo === 'Compra' ? 'bg-green-100 text-green-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {movimiento.tipo}
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${movimiento.status === 'completed' ? 'bg-red-100 text-red-800' :
+                        movimiento.status === 'cancelled' ? 'bg-green-100 text-green-800' :
+                          'bg-yellow-100 text-yellow-800'
+                        }`}>
+                        {movimiento.status.charAt(0).toUpperCase() + movimiento.status.slice(1)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{movimiento.producto}</div>
-                      <div className="text-sm text-gray-500">{movimiento.sku}</div>
+                      <div className="text-sm font-medium text-gray-900">{movimiento.items?.map(p => p.product?.name).join(', ') || 'N/A'}</div>
+                      <div className="text-sm text-gray-500">{movimiento.items?.map(p => p.sku || p.product?.sku).join(', ') || 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <span className={movimiento.cantidad < 0 ? 'text-red-600' : 'text-green-600'}>
-                        {movimiento.cantidad > 0 ? `+${movimiento.cantidad}` : movimiento.cantidad}
+                      <span className={movimiento.items?.reduce((sum, p) => sum + p.quantity, 0) < 0 ? 'text-red-600' : 'text-green-600'}>
+                        {movimiento.items?.reduce((sum, p) => sum + p.quantity, 0) > 0 ? `+${movimiento.items?.reduce((sum, p) => sum + p.quantity, 0)}` : movimiento.items?.reduce((sum, p) => sum + p.quantity, 0)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      S/ {movimiento.precioUnitario.toFixed(2)}
+                      S/ {movimiento.items?.reduce((sum, p) => sum + p.price, 0)?.toFixed(2) || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <span className={movimiento.total < 0 ? 'text-red-600' : 'text-green-600'}>
-                        S/ {Math.abs(movimiento.total).toFixed(2)}
+                      <span className={movimiento.amount < 0 ? 'text-red-600' : 'text-green-600'}>
+                        S/ {Math.abs(movimiento.amount).toFixed(2)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {movimiento.usuario}
+                      {movimiento.user}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button
-                        onClick={() => deshacerMovimiento(movimiento.id)}
+                        onClick={() => deshacerMovimiento(movimiento._id)}
                         className="text-yellow-600 hover:text-yellow-900 mr-3 flex items-center"
                         title="Deshacer movimiento"
                       >
@@ -399,6 +458,14 @@ const Historial = () => {
           </div>
         </div>
       )}
+
+      {/* Botón de refrescar datos */}
+      <button
+        onClick={() => refetch()}
+        className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 flex items-center"
+      >
+        <RefreshCw size={18} className="mr-2" /> Actualizar Datos
+      </button>
     </div>
   );
 };

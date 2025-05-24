@@ -1,12 +1,12 @@
-const nodemailer = require('nodemailer');
-const { 
-  EMAIL_HOST, 
-  EMAIL_PORT, 
-  EMAIL_SECURE, 
-  EMAIL_USERNAME, 
-  EMAIL_PASSWORD, 
-  EMAIL_FROM 
-} = require('../config/config');
+import nodemailer from 'nodemailer';
+import {
+  EMAIL_HOST,
+  EMAIL_PORT,
+  EMAIL_SECURE,
+  EMAIL_USERNAME,
+  EMAIL_PASSWORD,
+  EMAIL_FROM
+} from '../config/config.js';
 
 // Crear un transportador de correo reutilizable
 const transporter = nodemailer.createTransport({
@@ -118,7 +118,7 @@ const sendWelcomeEmail = async (email, userName) => {
   return sendEmail({ to: email, subject, text, html });
 };
 
-module.exports = {
+export {
   sendEmail,
   sendPasswordResetEmail,
   sendWelcomeEmail,

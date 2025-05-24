@@ -1,0 +1,15 @@
+{
+    "name": "ventas-bodega-app",
+    "version": "1.0.0",
+    "description": "Sistema de gestión de ventas para bodegas",
+    "scripts": {
+        "start": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm run dev\"",
+        "start:backend": "cd backend && npm run dev",
+        "start:frontend": "cd frontend && npm run dev",
+        "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install --legacy-peer-deps",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    }
+}

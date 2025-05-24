@@ -12,18 +12,11 @@ import { fileURLToPath } from 'url';
 
 // Importar rutas
 import authRoutes from './routes/auth.js';
-import { router } from './routes/index.js';
+import { router as apiRoutes } from './routes/index.js'; // Renombrado para claridad
 
 // Importar middlewares
-import { 
-  errorHandler, 
-  notFoundHandler, 
-  validationErrorHandler, 
-  jwtErrorHandler, 
-  duplicateKeyErrorHandler 
-} from './middleware/errorHandler.js';
+import { errorHandler } from './middleware/errorHandler.js';
 import { logger } from './utils/logger.js';
-import { authenticate } from './middleware/auth.js';
 
 // Configuración de __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -37,42 +30,33 @@ const isProduction = process.env.NODE_ENV === 'production';
 // Inicializar la aplicación Express
 const app = express();
 
-// Middleware para parsear el body con límite de tamaño
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+// --- Servir archivos estáticos ---
+// Construir la ruta absoluta a la carpeta 'public'
+const publicFolderPath = path.join(__dirname, 'public');
+// Servir la carpeta 'public' estáticamente
+app.use(express.static(publicFolderPath));
+// También podrías prefijar la ruta estática si quieres, ej:
+// app.use('/static', express.static(publicFolderPath));
+// En ese caso, las URLs a las imágenes serían /static/uploads/images/...
+// Por ahora, la dejaremos en la raíz para que sea /uploads/images/...
+// ---------------------------------
 
 // Configuración de CORS
 const corsOptions = {
   origin: (origin, callback) => {
-    // En desarrollo, permitir todos los orígenes
     if (process.env.NODE_ENV === 'development') {
       return callback(null, true);
     }
-    
-    // Permitir solicitudes sin origen (como aplicaciones móviles o curl)
     if (!origin) return callback(null, true);
-    
-    // Lista de orígenes permitidos
     const allowedOrigins = [
-      process.env.FRONTEND_URL || 'http://localhost:3000',
-      'http://localhost:3000',
-      'http://127.0.0.1:3000',
-      'http://localhost:5001',
-      'http://127.0.0.1:5001',
-      'http://localhost:3001',
-      'http://127.0.0.1:3001',
-      'http://localhost:5173',
-      'http://127.0.0.1:5173',
-      'http://localhost:3000',
-      'http://localhost:3001'
+      process.env.FRONTEND_URL || 'http://localhost:3000', // Puerto por defecto de create-react-app
+      'http://localhost:3001', // Puerto alternativo común frontend
+      'http://localhost:3002', // Puerto que hemos configurado para el frontend
+      'http://localhost:5173', // Puerto por defecto de Vite
     ];
-    
-    // Verificar si el origen está en la lista de permitidos
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    
-    // Si el origen no está permitido
     return callback(new Error('No permitido por CORS'));
   },
   credentials: true,
@@ -82,162 +66,92 @@ const corsOptions = {
   optionsSuccessStatus: 200
 };
 
-// Aplicar CORS con las opciones configuradas
 app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Habilitar pre-flight para todas las rutas
 
-// Manejar las solicitudes OPTIONS (preflight)
-app.options('*', cors(corsOptions));
-
-// Configuración de cookies
+// Middlewares básicos
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 
-// Sanitizar datos
+// Middlewares de seguridad
 app.use(mongoSanitize());
-
-// Establecer cabeceras de seguridad
 app.use(helmet());
-
-// Prevenir ataques XSS
 app.use(xss());
-
-// Prevenir inyección de parámetros HTTP
 app.use(hpp());
 
-// Limitar peticiones
-const limiter = rateLimit({
+// Limitar peticiones (Rate Limiting)
+const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 200, // límite de 200 peticiones por ventana
+  max: 100, // Límite de 100 peticiones por IP por ventana
   standardHeaders: true,
   legacyHeaders: false,
   message: {
     success: false,
     error: {
       code: 'TOO_MANY_REQUESTS',
-      message: 'Demasiadas peticiones desde esta IP, por favor inténtalo de nuevo más tarde',
+      message: 'Demasiadas peticiones desde esta IP, por favor inténtalo de nuevo más tarde.',
     },
   },
-  skip: (req) => {
-    // No aplicar límite a rutas de autenticación
-    const authRoutes = ['/api/v1/auth/login', '/api/v1/auth/refresh-token'];
-    return authRoutes.some(route => req.path.startsWith(route));
-  },
 });
+app.use('/api', apiLimiter); // Aplicar a todas las rutas bajo /api
 
-// Aplicar limitador de tasa solo en producción
-if (isProduction) {
-  app.use(limiter);
+// Rutas de la API
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1', apiRoutes); // Usar las rutas definidas en routes/index.js
+
+// Configuración para servir archivos estáticos del frontend en producción
+if (process.env.NODE_ENV === 'production') {
+  const frontendBuildPath = path.join(__dirname, '../frontend/dist'); // o 'build' si es create-react-app
+  app.use(express.static(frontendBuildPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(frontendBuildPath, 'index.html'));
+  });
+} else {
+  app.get('/', (req, res) => {
+    res.status(200).json({ message: 'API funcionando en modo desarrollo' });
+  });
 }
 
-// Configuración de rate limiting para autenticación
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 10, // 10 intentos por ventana
-  message: {
+// Manejador de rutas no encontradas para la API (debe ir después de las rutas de la API)
+app.use('/api', (req, res, next) => {
+  res.status(404).json({
     success: false,
     error: {
-      code: 'TOO_MANY_ATTEMPTS',
-      message: 'Demasiados intentos de inicio de sesión. Por favor, inténtalo de nuevo más tarde.',
+      code: 'NOT_FOUND',
+      message: `Ruta de API no encontrada: ${req.originalUrl}`,
     },
-  },
-});
-
-// Aplicar limitador de tasa para rutas de autenticación
-app.use(['/api/v1/auth/login', '/api/v1/auth/register'], authLimiter);
-
-// Configuración para servir archivos estáticos en producción
-if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/build')));
-}
-
-// Ruta de prueba
-app.get('/', (req, res) => {
-  res.status(200).json({
-    success: true,
   });
 });
 
-// Manejador de rutas no encontradas
-app.use(notFoundHandler);
-
-// Manejadores de errores
-app.use(jwtErrorHandler);
-app.use(validationErrorHandler);
-app.use(duplicateKeyErrorHandler);
+// Manejador de errores global (debe ser el último middleware)
 app.use(errorHandler);
 
-// Servir el frontend en producción
-if (process.env.NODE_ENV === 'production') {
-  app.get('*', (req, res) => {
-    res.sendFile(path.resolve(__dirname, '../frontend/build', 'index.html'));
-  });
-}
-
-// Manejo de excepciones no capturadas
+// Manejo de excepciones no capturadas y promesas rechazadas
 process.on('uncaughtException', (error) => {
   logger.error({
     message: 'Uncaught Exception',
-    error: {
-      name: error.name,
-      message: error.message,
-      stack: error.stack,
-    },
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
+    error: { name: error.name, message: error.message, stack: error.stack },
   });
-
-  // Cerrar la aplicación de manera controlada
-  process.exit(1);
+  // Considera cerrar el servidor de forma controlada
+  // process.exit(1); 
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   logger.error({
     message: 'Unhandled Rejection',
-    reason: {
-      name: reason?.name,
-      message: reason?.message,
-      stack: reason?.stack,
-    },
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV,
+    reason: reason && typeof reason === 'object' ?
+      {
+        name: 'name' in reason ? String(reason.name) : 'Unknown',
+        message: 'message' in reason ? String(reason.message) : 'Unknown reason',
+        stack: 'stack' in reason ? String(reason.stack) : ''
+      } :
+      { name: 'Unknown', message: String(reason), stack: '' },
   });
+  // Considera cerrar el servidor de forma controlada
 });
 
-// Manejar señales de terminación
-const shutdown = async (signal) => {
-  logger.info(`Recibida señal ${signal}. Cerrando servidor...`);
-  
-  // Cerrar conexiones a bases de datos, etc.
-  // Ejemplo: await mongoose.connection.close();
-  
-  // Cerrar el servidor
-  process.exit(0);
-};
-
-// Manejar señales de terminación
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
-
-// Exportar la aplicación para pruebas
+// Exportar la aplicación
 export { app };
-
-// Variable para el servidor HTTP
-/** @type {import('http').Server} */
-let httpServer;
-
-// Iniciar el servidor solo si no estamos en modo test
-if (process.env.NODE_ENV !== 'test') {
-  const PORT = process.env.PORT || 5000;
-  httpServer = app.listen(PORT, () => {
-    logger.info(`Servidor ejecutándose en modo ${process.env.NODE_ENV} en el puerto ${PORT}`);
-  });
-}
-    httpServer.close(() => {
-      logger.info('HTTP server closed');
-      setTimeout(() => process.exit(1), 2000);
-    });
-  } else {
-    setTimeout(() => process.exit(1), 2000);
-  }
-});
 
 export default app;

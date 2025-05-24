@@ -1,9 +1,11 @@
 import express from 'express';
-import authRouter from './auth.js';
+import { router as authRouter } from './auth.routes.js';
 import transactionRouter from './transaction.routes.js';
 import paymentRouter from './payment.routes.js';
+import uploadRouter from './upload.routes.js';
+import inventarioRouter from './inventario.routes.js';
 import { tenantMiddleware, checkSubscription } from '../middleware/tenant.js';
-import { authenticate, authorize } from '../middleware/auth.js';
+import { protect, authorize } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -21,43 +23,47 @@ router.get('/health', (req, res) => {
   res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
+    message: 'Servicio de Backend Activo',
     environment: process.env.NODE_ENV || 'development',
   });
 });
 
-// Aplicar middleware de tenant a todas las rutas
-router.use(tenantMiddleware);
-
-// Rutas públicas de autenticación
+// Rutas públicas de autenticación (sin middleware de tenant global aquí)
 router.use('/auth', authRouter);
 
-// Middleware de autenticación para rutas protegidas
-router.use(authenticate);
+// Rutas de Subida
+router.use('/uploads', uploadRouter);
 
-// Aplicar verificación de suscripción a rutas protegidas
+// Rutas de Inventario (deben ir antes de los middlewares protect, tenant y subscription si algunas son públicas)
+// O después si todas son protegidas. Por ahora las ponemos después de /uploads y antes de protect.
+router.use('/inventario', inventarioRouter);
+
+// Middleware de protección para todas las rutas subsiguientes
+router.use(protect);
+
+// Middleware de tenant y verificación de suscripción para rutas protegidas
+// Se aplicará a /transactions, /payments, /admin/dashboard, /user/profile
+router.use(tenantMiddleware);
 router.use(checkSubscription);
 
-// Rutas protegidas de la API
-
-// Rutas de transacciones (protegidas)
+// Rutas protegidas que requieren tenant y suscripción activa
 router.use('/transactions', transactionRouter);
-
-// Rutas de pagos (protegidas)
 router.use('/payments', paymentRouter);
 
-// Ruta de ejemplo protegida que requiere rol de administrador
 router.get('/admin/dashboard', authorize('admin'), (req, res) => {
   res.status(200).json({
     success: true,
-    data: 'Panel de administrador',
+    data: 'Panel de administrador accesible',
+    tenant: req.tenant,
+    user: req.user,
   });
 });
 
-// Ruta de ejemplo protegida que requiere rol de usuario
 router.get('/user/profile', (req, res) => {
   res.status(200).json({
     success: true,
-    data: 'Perfil de usuario',
+    data: 'Perfil de usuario accesible',
+    tenant: req.tenant,
     user: req.user,
   });
 });

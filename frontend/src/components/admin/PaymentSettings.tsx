@@ -1,31 +1,31 @@
-import React, { useState, useRef, useEffect, FC, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import PropTypes from 'prop-types';
 
 // Material-UI Components
-import { 
-  Box, 
-  Button, 
-  Card, 
-  CardHeader, 
-  CardContent, 
-  Typography, 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
-  CircularProgress, 
-  Alert, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Chip, 
-  Collapse, 
+import {
+  Box,
+  Button,
+  Card,
+  CardHeader,
+  CardContent,
+  Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  CircularProgress,
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
+  Collapse,
   IconButton,
   TextField,
   MenuItem,
@@ -52,7 +52,10 @@ import {
   ListItemText,
   ListItemSecondaryAction,
   CardMedia,
-  CardActions
+  CardActions,
+  Checkbox,
+  Tab,
+  Tabs
 } from '@mui/material';
 
 // Material-UI Icons
@@ -60,7 +63,7 @@ import {
   CloudUpload as CloudUploadIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
-  CheckCircleOutline as CheckCircleOutlineIcon,
+  CheckCircleOutline,
   ErrorOutline as ErrorOutlineIcon,
   PendingActions as PendingActionsIcon,
   AttachMoney as AttachMoneyIcon,
@@ -84,159 +87,15 @@ import {
   GetApp as DownloadIcon,
   Print as PrintIcon,
   Share as ShareIcon,
-  HighlightOff as HighlightOffIcon
+  HighlightOff,
+  Check as CheckIcon,
+  Schedule as ScheduleIcon,
+  Upload as UploadIcon
 } from '@mui/icons-material';
 
 // Hooks
-import React, { FC, useState, useEffect } from 'react';
-import {
-  Box,
-  Button,
-  Card,
-  CardContent,
-  Checkbox,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  FormControl,
-  FormControlLabel,
-  Grid,
-  IconButton,
-  InputLabel,
-  List,
-  ListItem,
-  ListItemText,
-  MenuItem,
-  Paper,
-  Select,
-  Switch,
-  Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Tabs,
-  TextField,
-  Typography,
-  useTheme,
-  styled
-} from '@mui/material';
-import {
-  AccountBalanceWallet as AccountBalanceWalletIcon,
-  AttachMoney as AttachMoneyIcon,
-  Check as CheckIcon,
-  CheckCircleOutline as CheckCircleOutlineIcon,
-  Close as CloseIcon,
-  CreditCard as CreditCardIcon,
-  Delete as DeleteIcon,
-  Edit as EditIcon,
-  Error as ErrorIcon,
-  HighlightOff as HighlightOffIcon,
-  Payment as PaymentIcon,
-  PendingActions as PendingActionsIcon,
-  Refresh as RefreshIcon,
-  Save as SaveIcon,
-  Schedule as ScheduleIcon,
-  Upload as UploadIcon,
-  Visibility as VisibilityIcon
-} from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 import { usePayments } from '../../hooks/usePayments';
-import { toast } from 'react-toastify';
-
-// Types
-type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'refunded';
-type PaymentMethod = 'transfer' | 'deposit' | 'yape' | 'plin' | 'credit_card';
-
-interface PaymentMethodOption {
-  value: PaymentMethod;
-  label: string;
-  icon?: React.ReactNode;
-}
-
-interface Payment {
-  id: string;
-  amount: number;
-  currency: string;
-  method: PaymentMethod;
-  status: PaymentStatus;
-  reference?: string;
-  paymentDate: Date | string;
-  notes?: string;
-  paymentProof?: string | File;
-}
-
-interface PaymentDetail {
-  id: string;
-  // Add other payment detail fields as needed
-}
-
-interface PaymentHistory {
-  id: string;
-  // Add other history fields as needed
-}
-
-interface PaymentFormData {
-  amount: number;
-  currency: string;
-  method: PaymentMethod;
-  reference: string;
-  description: string;
-  paymentDate: Date;
-  paymentProof: File | null;
-  notes: string;
-}
-
-interface PaymentSettingsProps {
-  onClose: () => void;
-  tenant: any; // Replace 'any' with proper type
-  onUpdate: () => void;
-}
-
-// Status Indicator Component
-const StatusIndicator: FC<{ status: PaymentStatus }> = ({ status }) => {
-  const statusConfig = {
-    approved: {
-      icon: <CheckCircleOutlineIcon fontSize="small" color="success" />,
-      label: 'Aprobado'
-    },
-    pending: {
-      icon: <ScheduleIcon fontSize="small" color="warning" />,
-      label: 'Pendiente'
-    },
-    rejected: {
-      icon: <HighlightOffIcon fontSize="small" color="error" />,
-      label: 'Rechazado'
-    },
-    cancelled: {
-      icon: <HighlightOffIcon fontSize="small" color="default" />,
-      label: 'Cancelado'
-    },
-    refunded: {
-      icon: <RefreshIcon fontSize="small" color="info" />,
-      label: 'Reembolsado'
-    }
-  };
-
-  const config = statusConfig[status] || statusConfig.pending;
-
-  return (
-    <Box display="flex" alignItems="center" gap={1}>
-      <Chip
-        icon={config.icon}
-        label={config.label}
-        color={config.color}
-        variant="outlined"
-        size="small"
-      />
-    </Box>
-  );
-};
 
 // Utils
 import api from '../../utils/api';
@@ -246,7 +105,6 @@ import api from '../../utils/api';
 // =============================================
 
 type PaymentMethod = 'transfer' | 'deposit' | 'yape' | 'plin' | 'credit_card';
-
 type PaymentMethodLabel = 'Transferencia Bancaria' | 'Depósito' | 'Yape' | 'Plin' | 'Tarjeta de Crédito';
 type PaymentStatus = 'pending' | 'approved' | 'rejected' | 'cancelled' | 'refunded';
 
@@ -257,30 +115,75 @@ interface PaymentMethodOption {
   description?: string;
 }
 
+// Status Indicator Component
+const StatusIndicator: React.FC<{ status: PaymentStatus }> = ({ status }) => {
+  const statusConfig = {
+    approved: {
+      icon: <CheckCircleOutline fontSize="small" color="success" />,
+      label: 'Aprobado',
+      color: 'success'
+    },
+    pending: {
+      icon: <ScheduleIcon fontSize="small" color="warning" />,
+      label: 'Pendiente',
+      color: 'warning'
+    },
+    rejected: {
+      icon: <HighlightOff fontSize="small" color="error" />,
+      label: 'Rechazado',
+      color: 'error'
+    },
+    cancelled: {
+      icon: <HighlightOff fontSize="small" color="default" />,
+      label: 'Cancelado',
+      color: 'default'
+    },
+    refunded: {
+      icon: <RefreshIcon fontSize="small" color="info" />,
+      label: 'Reembolsado',
+      color: 'info'
+    }
+  };
+
+  const config = statusConfig[status] || statusConfig.pending;
+
+  return (
+    <Box display="flex" alignItems="center" gap={1}>
+      <Chip
+        icon={config.icon}
+        label={config.label}
+        color={status === 'approved' ? 'success' : status === 'pending' ? 'warning' : 'error'}
+        variant="outlined"
+        size="small"
+      />
+    </Box>
+  );
+};
+
 // Payment method options
 const PAYMENT_METHOD_OPTIONS: PaymentMethodOption[] = [
-  { 
-    value: 'transfer', 
+  {
+    value: 'transfer',
     label: 'Transferencia Bancaria',
     icon: <AccountBalanceWalletIcon />
   },
-  { 
-    value: 'deposit', 
+  {
+    value: 'deposit',
     label: 'Depósito',
     icon: <AccountBalanceWalletIcon />
   },
-  { 
-    value: 'yape', 
+  {
+    value: 'yape',
     label: 'Yape',
     icon: <PaymentIcon />
   },
-  { 
-    value: 'plin', 
+  {
+    value: 'plin',
     label: 'Plin',
     icon: <PaymentIcon />
   },
-  { 
-    value: 'credit_card', 
+  {
+    value: 'credit_card',
     label: 'Tarjeta de Crédito',
     icon: <CreditCardIcon />
   }
@@ -288,6 +191,7 @@ const PAYMENT_METHOD_OPTIONS: PaymentMethodOption[] = [
 
 export interface Payment {
   _id: string;
+  id?: string;
   amount: number;
   currency: string;
   status: PaymentStatus;
@@ -295,14 +199,19 @@ export interface Payment {
   reference: string;
   description?: string;
   paymentDate: Date | string;
-  createdAt: Date | string;
-  updatedAt: Date | string;
+  date?: string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
   receiptUrl?: string;
+  paymentMethod?: string;
+  paymentProof?: string | File;
   metadata?: Record<string, any>;
+  notes?: string;
 }
 
 export interface PaymentHistory {
   _id: string;
+  id?: string;
   paymentId: string;
   status: PaymentStatus;
   changedBy: string;
@@ -312,6 +221,7 @@ export interface PaymentHistory {
 
 export interface PaymentDetail {
   _id: string;
+  id?: string;
   payment: Payment;
   history: PaymentHistory[];
   tenant: {
@@ -376,6 +286,7 @@ export interface Tenant {
 
 export interface PaymentSettingsProps {
   tenant: string | { _id: string; name: string };
+  onClose?: () => void;
   onUpdate?: () => void;
 }
 
@@ -400,7 +311,7 @@ const StyledStatusChip = styled(Chip, {
   };
 
   const backgroundColor = statusColors[status] || theme.palette.grey[300];
-  
+
   return {
     backgroundColor,
     color: theme.palette.getContrastText(backgroundColor),
@@ -591,10 +502,10 @@ const ActionButtons = ({
   loading: boolean;
   disabled?: boolean;
 }) => (
-  <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+  <Box display="flex" gap={1} justifyContent="flex-end">
     {status === 'pending' && (
       <>
-        <ActionButton
+        <Button
           variant="contained"
           color="success"
           onClick={onApprove}
@@ -602,8 +513,8 @@ const ActionButtons = ({
           startIcon={loading ? <CircularProgress size={20} /> : <CheckCircleOutline />}
         >
           Aprobar
-        </ActionButton>
-        <ActionButton
+        </Button>
+        <Button
           variant="outlined"
           color="error"
           onClick={onReject}
@@ -611,15 +522,13 @@ const ActionButtons = ({
           startIcon={loading ? <CircularProgress size={20} /> : <HighlightOff />}
         >
           Rechazar
-        </ActionButton>
+        </Button>
       </>
     )}
   </Box>
 );
 
-
-
-const PaymentSettings: FC<PaymentSettingsProps> = ({ onClose, tenant, onUpdate }) => {
+const PaymentSettings: React.FC<PaymentSettingsProps> = ({ onClose, tenant, onUpdate }) => {
   // State management
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -642,7 +551,7 @@ const PaymentSettings: FC<PaymentSettingsProps> = ({ onClose, tenant, onUpdate }
     key: 'paymentDate',
     direction: 'desc'
   });
-  
+
   // Form state
   const [formData, setFormData] = useState<PaymentFormData>({
     amount: 0,
@@ -654,19 +563,159 @@ const PaymentSettings: FC<PaymentSettingsProps> = ({ onClose, tenant, onUpdate }
     paymentProof: null,
     notes: ''
   });
-  
+
   const theme = useTheme();
   const { user } = useAuth();
   const { processPayment, getPaymentHistory } = usePayments();
-  const theme = useTheme();
-  const [isActive, setIsActive] = useState(false);
-  const [showManualPayment, setShowManualPayment] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [showPaymentDetail, setShowPaymentDetail] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [lastUpdatedBy, setLastUpdatedBy] = useState<string>('');
-  const [showRetry, setShowRetry] = useState(false);
-  
+
+  // Handle view payment details
+  const handleViewPayment = (payment: Payment) => {
+    setSelectedPayment(payment);
+    setShowPaymentDetail(true);
+  };
+
+  // Render payment dialog
+  const renderPaymentDialog = (): JSX.Element | null => {
+    if (!selectedPayment) return null;
+
+    return (
+      <Dialog
+        open={showPaymentDialog}
+        onClose={() => setShowPaymentDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Detalles del Pago</DialogTitle>
+        <DialogContent>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Información del Pago</Typography>
+              <List>
+                <ListItem>
+                  <ListItemText
+                    primary="Método de pago"
+                    secondary={selectedPayment.method}
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemText
+                    primary="Monto"
+                    secondary={`${selectedPayment.amount} ${selectedPayment.currency}`}
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemText
+                    primary="Estado"
+                    secondary={<StatusIndicator status={selectedPayment.status} />}
+                  />
+                </ListItem>
+              </List>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Información Adicional</Typography>
+              <List>
+                <ListItem>
+                  <ListItemText
+                    primary="Referencia"
+                    secondary={selectedPayment.reference || 'N/A'}
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemText
+                    primary="Fecha"
+                    secondary={new Date(selectedPayment.paymentDate).toLocaleString()}
+                  />
+                </ListItem>
+              </List>
+            </Grid>
+          </Grid>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowPaymentDialog(false)}>Cerrar</Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
+  // Render manual payment dialog
+  const renderManualPaymentDialog = (): JSX.Element => {
+    return (
+      <Dialog
+        open={showManualPayment}
+        onClose={() => setShowManualPayment(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Agregar Pago Manual</DialogTitle>
+        <DialogContent>
+          <Box component="form" noValidate sx={{ mt: 1 }}>
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <TextField
+                  select
+                  fullWidth
+                  label="Método de Pago"
+                  variant="outlined"
+                  value={formData.method}
+                  onChange={(e) => setFormData({ ...formData, method: e.target.value as PaymentMethod })}
+                  margin="normal"
+                >
+                  {PAYMENT_METHOD_OPTIONS.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>
+                      <Box display="flex" alignItems="center">
+                        {option.icon}
+                        <Box ml={1}>{option.label}</Box>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </TextField>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Monto"
+                  type="number"
+                  variant="outlined"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) })}
+                  margin="normal"
+                  InputProps={{
+                    startAdornment: <span>S/</span>
+                  }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Referencia"
+                  variant="outlined"
+                  value={formData.reference}
+                  onChange={(e) => setFormData({ ...formData, reference: e.target.value })}
+                  margin="normal"
+                />
+              </Grid>
+            </Grid>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowManualPayment(false)}>Cancelar</Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => {
+              // Acción para guardar el pago manual
+              toast.success('Pago registrado correctamente');
+              setShowManualPayment(false);
+            }}
+          >
+            Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
+    );
+  };
+
   // Render payment history
   const renderPaymentHistory = (): JSX.Element => {
     return (
@@ -689,21 +738,28 @@ const PaymentSettings: FC<PaymentSettingsProps> = ({ onClose, tenant, onUpdate }
                 </TableRow>
               </TableHead>
               <TableBody>
-                {paymentHistory.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>{new Date(payment.paymentDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{payment.method}</TableCell>
-                    <TableCell>{payment.amount} {payment.currency}</TableCell>
-                    <TableCell>
-                      <StatusIndicator status={payment.status} />
-                    </TableCell>
-                    <TableCell>
-                      <IconButton onClick={() => handleViewPayment(payment)}>
-                        <VisibilityIcon />
-                      </IconButton>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {/* Mock data for now */}
+                <TableRow>
+                  <TableCell>2023-01-01</TableCell>
+                  <TableCell>Transferencia</TableCell>
+                  <TableCell>S/ 100.00</TableCell>
+                  <TableCell>
+                    <StatusIndicator status="approved" />
+                  </TableCell>
+                  <TableCell>
+                    <IconButton onClick={() => handleViewPayment({
+                      _id: '1',
+                      amount: 100,
+                      currency: 'PEN',
+                      status: 'approved',
+                      method: 'transfer',
+                      reference: 'REF-123',
+                      paymentDate: '2023-01-01'
+                    })}>
+                      <VisibilityIcon />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
               </TableBody>
             </Table>
           </TableContainer>
@@ -712,20 +768,14 @@ const PaymentSettings: FC<PaymentSettingsProps> = ({ onClose, tenant, onUpdate }
     );
   };
 
-  // Handle view payment details
-  const handleViewPayment = (payment: Payment) => {
-    setSelectedPayment(payment);
-    setShowPaymentDetail(true);
-  };
-
-  // Render payment dialog
-  const renderPaymentDialog = (): JSX.Element | null => {
+  // Render payment detail
+  const renderPaymentDetail = (): JSX.Element | null => {
     if (!selectedPayment) return null;
-    
+
     return (
-      <Dialog 
-        open={showPaymentDialog} 
-        onClose={() => setShowPaymentDialog(false)}
+      <Dialog
+        open={showPaymentDetail}
+        onClose={() => setShowPaymentDetail(false)}
         maxWidth="md"
         fullWidth
       >
@@ -733,1043 +783,81 @@ const PaymentSettings: FC<PaymentSettingsProps> = ({ onClose, tenant, onUpdate }
         <DialogContent>
           <Grid container spacing={2}>
             <Grid item xs={12} md={6}>
-              <Typography variant="subtitle1">Información del Pago</Typography>
-              <List>
-                <ListItem>
-                  <ListItemText 
-                    primary="Método de pago" 
-                    secondary={selectedPayment.method} 
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemText 
-                    primary="Monto" 
-                    secondary={`${selectedPayment.amount} ${selectedPayment.currency}`} 
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemText 
-                    primary="Estado" 
-                    secondary={<StatusIndicator status={selectedPayment.status} />} 
-                  />
-                </ListItem>
-              </List>
+              <Typography variant="subtitle1">Monto:</Typography>
+              <Typography variant="body1">{selectedPayment.amount} {selectedPayment.currency}</Typography>
             </Grid>
             <Grid item xs={12} md={6}>
-              <Typography variant="subtitle1">Información Adicional</Typography>
-              <List>
-                <ListItem>
-                  <ListItemText 
-                    primary="Referencia" 
-                    secondary={selectedPayment.reference || 'N/A'} 
-                  />
-                </ListItem>
-                <ListItem>
-                  <ListItemText 
-                    primary="Fecha" 
-                    secondary={new Date(selectedPayment.paymentDate).toLocaleString()} 
-                  />
-                </ListItem>
-              </List>
+              <Typography variant="subtitle1">Estado:</Typography>
+              <StatusIndicator status={selectedPayment.status} />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Método:</Typography>
+              <Typography variant="body1">
+                {PAYMENT_METHOD_OPTIONS.find(m => m.value === selectedPayment.method)?.label || selectedPayment.method}
+              </Typography>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant="subtitle1">Referencia:</Typography>
+              <Typography variant="body1">{selectedPayment.reference || 'N/A'}</Typography>
+            </Grid>
+            <Grid item xs={12}>
+              <Typography variant="subtitle1">Fecha:</Typography>
+              <Typography variant="body1">
+                {new Date(selectedPayment.paymentDate).toLocaleDateString()}
+              </Typography>
             </Grid>
           </Grid>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setShowPaymentDialog(false)}>Cerrar</Button>
+          <Button onClick={() => setShowPaymentDetail(false)}>Cerrar</Button>
         </DialogActions>
       </Dialog>
     );
   };
-  
-  // Render manual payment dialog
-  const renderManualPaymentDialog = (): JSX.Element => {
-    return (
-      <Dialog 
-        open={showManualPayment} 
-        onClose={() => setShowManualPayment(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Agregar Pago Manual</DialogTitle>
-        <DialogContent>
-          <Box component="form" noValidate sx={{ mt: 1 }}>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                  select
-                  fullWidth
-                  label="Método de pago"
-                  value={formData.method}
-                  onChange={(e) => setFormData({...formData, method: e.target.value as PaymentMethod})}
-                  variant="outlined"
-                  margin="normal"
-                >
-                  {PAYMENT_METHOD_OPTIONS.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>
-                      {option.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Monto"
-                  type="number"
-                  value={formData.amount}
-                  onChange={(e) => setFormData({...formData, amount: Number(e.target.value)})}
-                  variant="outlined"
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  label="Referencia"
-                  value={formData.reference}
-                  onChange={(e) => setFormData({...formData, reference: e.target.value})}
-                  variant="outlined"
-                  margin="normal"
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Descripción"
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                  variant="outlined"
-                  margin="normal"
-                  multiline
-                  rows={3}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <input
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                  id="payment-proof-upload"
-                  type="file"
-                  onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      setFormData({...formData, paymentProof: e.target.files[0]});
-                    }
-                  }}
-                />
-                <label htmlFor="payment-proof-upload">
-                  <Button
-                    variant="outlined"
-                    component="span"
-                    startIcon={<CloudUploadIcon />}
-                  >
-                    {formData.paymentProof ? 'Cambiar comprobante' : 'Subir comprobante'}
-                  </Button>
-                </label>
-                {formData.paymentProof && (
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    {formData.paymentProof.name}
-                  </Typography>
-                )}
-              </Grid>
-            </Grid>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowManualPayment(false)}>Cancelar</Button>
-          <Button 
-            variant="contained" 
-            color="primary"
-            onClick={handleSubmitManualPayment}
-            disabled={isSaving}
-          >
-            {isSaving ? 'Guardando...' : 'Guardar'}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    );
-  };
-  
-  // Handle manual payment submission
-  const handleSubmitManualPayment = async () => {
-    try {
-      setIsSaving(true);
-      // TODO: Implement payment submission logic
-      // await processPayment(formData);
-      setShowManualPayment(false);
-      toast.success('Pago registrado exitosamente');
-    } catch (err) {
-      console.error('Error al registrar pago:', err);
-      toast.error('Error al registrar el pago');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-  
-  // Render payment detail
-  const renderPaymentDetail = (payment: Payment): JSX.Element => {
-    return (
-      <Box mt={2}>
-        <Typography variant="h6" gutterBottom>Detalles del Pago</Typography>
-        <Card>
-          <CardContent>
-            <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Método de pago:</Typography>
-                <Typography>{payment.method}</Typography>
-                
-                <Typography variant="subtitle2" sx={{ mt: 2 }}>Monto:</Typography>
-                <Typography>{payment.amount} {payment.currency}</Typography>
-                
-                <Typography variant="subtitle2" sx={{ mt: 2 }}>Estado:</Typography>
-                <StatusIndicator status={payment.status} />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle2">Referencia:</Typography>
-                <Typography>{payment.reference || 'N/A'}</Typography>
-                
-                <Typography variant="subtitle2" sx={{ mt: 2 }}>Fecha:</Typography>
-                <Typography>{new Date(payment.paymentDate).toLocaleString()}</Typography>
-                
-                {payment.notes && (
-                  <>
-                    <Typography variant="subtitle2" sx={{ mt: 2 }}>Notas:</Typography>
-                    <Typography>{payment.notes}</Typography>
-                  </>
-                )}
-              </Grid>
-              {payment.paymentProof && (
-                <Grid item xs={12}>
-                  <Typography variant="subtitle2">Comprobante:</Typography>
-                  <img 
-                    src={payment.paymentProof} 
-                    alt="Comprobante de pago" 
-                    style={{ maxWidth: '100%', maxHeight: '300px', marginTop: '10px' }} 
-                  />
-                </Grid>
-              )}
-            </Grid>
-          </CardContent>
-        </Card>
-      </Box>
-    );
-  };
-  const [isUploading, setIsUploading] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [isActive, setIsActive] = useState(false);
-  const [tempReason, setTempReason] = useState('');
-  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
-  const [switchChecked, setSwitchChecked] = useState(false);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [showManualPayment, setShowManualPayment] = useState(false);
-  const [showHistory, setShowHistory] = useState(false);
-  const [showDetail, setShowDetail] = useState(false);
-  const [showReasonDialog, setShowReasonDialog] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
-  const [paymentDetail, setPaymentDetail] = useState<PaymentDetail | null>(null);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [paymentHistory, setPaymentHistory] = useState<Payment[]>([]);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState<PaymentStatus | 'all'>('all');
-  const [sortConfig, setSortConfig] = useState<{ key: keyof Payment; direction: 'asc' | 'desc' }>({ 
-    key: 'createdAt', 
-    direction: 'desc' 
-  });
-  const [formData, setFormData] = useState<PaymentFormData>({
-    amount: 0,
-    currency: 'PEN',
-    method: 'transfer',
-    reference: '',
-    description: '',
-    paymentDate: new Date().toISOString().split('T')[0],
-    paymentProof: null,
-    notes: ''
-  });
-  const [expandedPayment, setExpandedPayment] = useState<string | null>(null);
-  
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
-  const { user } = useAuth();
-  const theme = useTheme();
-
-  // Payment and plan data from hooks
-  const { payments: paymentsData, loading: paymentsLoading, uploadReceipt } = usePayments(tenant);
-  const { initCulqi, processPayment, loading: paymentProcessing } = useCulqi();
-  
-  // Mock lastUpdatedBy for now
-  const lastUpdatedBy = user?.name || 'Sistema';
-  
-  // Initialize errors state
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  
-  // Handle payment detail dialog
-  const [showPaymentDetail, setShowPaymentDetail] = useState(false);
-  
-  // Handle view payment details
-  const handleViewPayment = (payment: Payment) => {
-    setSelectedPayment(payment);
-    setShowPaymentDetail(true);
-  };
-  
-  // Close payment detail dialog
-  const handleClosePaymentDetail = () => {
-    setShowPaymentDetail(false);
-    setSelectedPayment(null);
-  };
-
-  // Load payment data
-  useEffect(() => {
-    const loadPaymentData = async () => {
-      try {
-        setIsLoading(true);
-        // Replace with actual API call
-        // const response = await api.get(`/payments/tenant/${typeof tenant === 'string' ? tenant : tenant._id}`);
-        // setPayments(response.data);
-        
-        // Mock data for development
-        const mockPayments: Payment[] = [
-          {
-            _id: '1',
-            id: '1',
-            amount: 100,
-            date: '2023-01-01',
-            paymentDate: '2023-01-01',
-            status: 'approved',
-            reference: 'REF-123',
-            paymentMethod: 'transfer',
-            method: 'Transferencia Bancaria',
-            receiptUrl: '/receipts/sample.pdf',
-            currency: 'PEN',
-            description: 'Pago mensual de suscripción',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-          }
-        ];
-        
-        setPayments(mockPayments);
-        setPaymentHistory(mockPayments);
-      } catch (error) {
-        console.error('Error loading payment data:', error);
-        toast.error('Error al cargar los datos de pagos');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadPaymentData();
-  }, [tenant]);
-  // Plan information
-  const planInfo = {
-    price: 99.00,
-    name: 'Plan Premium',
-    currency: 'PEN',
-    billingCycle: 'Mensual',
-    features: [
-      'Acceso completo a todas las funciones',
-      'Soporte prioritario',
-      'Actualizaciones automáticas',
-      'Integración con pasarelas de pago'
-    ]
-  };
-
-  // Handle input changes
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  // Handle date change
-  const handleDateChange = (date: Date | null) => {
-    setFormData(prev => ({
-      ...prev,
-      paymentDate: date ? date.toISOString().split('T')[0] : ''
-    }));
-  };
-
-  // Handle file upload
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      setFormData(prev => ({
-        ...prev,
-        paymentProof: event.target.files?.[0] || null
-      }));
-    }
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsProcessing(true);
-    try {
-      await uploadReceipt(formData);
-      setShowManualPayment(false);
-      // Reset form
-      setFormData({
-        amount: 0,
-        currency: 'PEN',
-        method: 'transfer',
-        reference: '',
-        description: '',
-        paymentDate: new Date().toISOString().split('T')[0],
-        paymentProof: null,
-        notes: ''
-      });
-    } catch (error) {
-      console.error('Error uploading receipt:', error);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Handle manual payment submission
-  const handleManualPaymentSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!formData.paymentProof) {
-      toast.error('Por favor, selecciona un comprobante de pago');
-      return;
-    }
-
-    try {
-      setIsProcessing(true);
-      const formDataToSend = new FormData();
-      formDataToSend.append('amount', formData.amount.toString());
-      formDataToSend.append('currency', formData.currency || 'PEN');
-      formDataToSend.append('method', formData.method);
-      formDataToSend.append('reference', formData.reference);
-      formDataToSend.append('description', formData.description || '');
-      formDataToSend.append('paymentDate', formData.paymentDate as string);
-      formDataToSend.append('notes', formData.notes);
-      if (formData.paymentProof) {
-        formDataToSend.append('receipt', formData.paymentProof);
-      }
-      await api.post('/api/payments', formDataToSend, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      toast.success('Pago registrado exitosamente');
-      setShowManualPayment(false);
-      onUpdate();
-      // Reset form
-      setFormData({
-        amount: 0,
-        currency: 'PEN',
-        method: 'transfer',
-        reference: '',
-        description: '',
-        paymentDate: new Date().toISOString().split('T')[0],
-        paymentProof: null,
-        notes: ''
-      });
-    } catch (error) {
-      console.error('Error al registrar el pago:', error);
-      toast.error('Error al registrar el pago');
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Render manual payment dialog
-  const renderManualPaymentDialog = () => (
-    <Dialog open={showManualPayment} onClose={() => !isProcessing && setShowManualPayment(false)} maxWidth="md" fullWidth>
-      <form onSubmit={handleManualPaymentSubmit}>
-        <DialogTitle sx={{ bgcolor: 'primary.main', color: 'white', py: 1 }}>
-          <Box display="flex" alignItems="center">
-            <CloudUploadIcon sx={{ mr: 1 }} />
-            Subir Comprobante de Pago
-          </Box>
-        </DialogTitle>
-        <DialogContent>
-          <Box py={2}>
-            <Grid container spacing={3}>
-              {/* Columna izquierda - Formulario */}
-              <Grid item xs={12} md={6} component="div">
-                <Typography variant="subtitle1" gutterBottom color="textPrimary">
-                  Información del Pago
-                </Typography>
-                <Grid container spacing={2} component="div">
-                  <Grid item xs={12} sm={6} component="div">
-                    <TextField
-                      fullWidth
-                      label="Monto (S/)"
-                      name="amount"
-                      type="number"
-                      value={formData.amount || ''}
-                      onChange={handleInputChange}
-                      error={!!errors.amount}
-                      helperText={errors.amount}
-                      inputProps={{
-                        min: "0.01",
-                        step: "0.01"
-                      }}
-                      InputProps={{
-                        startAdornment: <InputAdornment position="start">S/</InputAdornment>,
-                      }}
-                      disabled={isProcessing}
-                      variant="outlined"
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Fecha de Pago"
-                      name="paymentDate"
-                      type="date"
-                      value={formData.paymentDate}
-                      onChange={handleDateChange}
-                      error={!!errors.paymentDate}
-                      helperText={errors.paymentDate}
-                      disabled={isProcessing}
-                      variant="outlined"
-                      margin="normal"
-                      InputLabelProps={{
-                        shrink: true,
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Número de Operación/Referencia"
-                      name="reference"
-                      value={formData.reference}
-                      onChange={handleInputChange}
-                      error={!!errors.reference}
-                      helperText={errors.reference || 'Número de operación, transferencia o referencia'}
-                      disabled={isProcessing}
-                      variant="outlined"
-                      margin="normal"
-                    />
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      select
-                      fullWidth
-                      label="Método de Pago"
-                      name="method"
-                      value={formData.method}
-                      onChange={handleInputChange}
-                      disabled={isProcessing}
-                      variant="outlined"
-                      margin="normal"
-                    >
-                      {PAYMENT_METHODS.map((method) => (
-                        <MenuItem key={method.value} value={method.value}>
-                          {method.label}
-                        </MenuItem>
-                      ))}
-                    </TextField>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <TextField
-                      fullWidth
-                      label="Notas (Opcional)"
-                      name="notes"
-                      value={formData.notes}
-                      onChange={handleInputChange}
-                      disabled={isProcessing}
-                      variant="outlined"
-                      margin="normal"
-                      multiline
-                      rows={3}
-                      placeholder="Agrega cualquier información adicional sobre este pago"
-                    />
-                  </Grid>
-                </Grid>
-              </Grid>
-              {/* Columna derecha - Subida de archivo */}
-              <Grid item xs={12} md={6}>
-                <Typography variant="subtitle1" gutterBottom color="textPrimary">
-                  Comprobante de Pago
-                </Typography>
-                <Box
-                  sx={{
-                    border: '2px dashed',
-                    borderColor: errors.file ? 'error.main' : 'divider',
-                    borderRadius: 2,
-                    p: 3,
-                    textAlign: 'center',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      borderColor: 'primary.main',
-                      bgcolor: 'action.hover',
-                    },
-                    transition: 'all 0.3s ease',
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                  onClick={() => document.getElementById('receipt-upload').click()}
-                >
-                  <input
-                    id="receipt-upload"
-                    type="file"
-                    accept="image/*,.pdf"
-                    style={{ display: 'none' }}
-                    onChange={handleFileChange}
-                    disabled={isProcessing}
-                  />
-                  {formData.paymentProof ? (
-                    <>
-                      {formData.paymentProof.type.startsWith('image/') ? (
-                        <img
-                          src={URL.createObjectURL(formData.paymentProof)}
-                          alt="Vista previa del comprobante"
-                          style={{
-                            maxWidth: '100%',
-                            maxHeight: '200px',
-                            marginBottom: '16px',
-                            borderRadius: '4px',
-                            border: '1px solid #e0e0e0',
-                          }}
-                        />
-                      ) : (
-                        <Box
-                          sx={{
-                            bgcolor: 'grey.100',
-                            p: 3,
-                            borderRadius: 1,
-                            mb: 2,
-                            width: '100%',
-                            textAlign: 'center',
-                          }}
-                        >
-                          <PictureAsPdfIcon sx={{ fontSize: 64, color: 'error.main' }} />
-                          <Typography variant="body2" color="textSecondary">
-                            {formData.paymentProof.name}
-                          </Typography>
-                        </Box>
-                      )}
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        startIcon={<CloudUploadIcon />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          document.getElementById('receipt-upload').click();
-                        }}
-                        disabled={isProcessing}
-                        sx={{ mt: 1 }}
-                      >
-                        Cambiar archivo
-                      </Button>
-                    </>
-                  ) : (
-                    <>
-                      <CloudUploadIcon sx={{ fontSize: 48, color: 'action.active', mb: 1 }} />
-                      <Typography variant="body1" gutterBottom>
-                        Haz clic o arrastra un archivo aquí
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary" paragraph>
-                        Formatos aceptados: JPG, PNG, PDF (máx. 5MB)
-                      </Typography>
-                      <Button
-                        variant="contained"
-                        color="primary"
-                        component="span"
-                        disabled={isProcessing}
-                      >
-                        Seleccionar archivo
-                      </Button>
-                    </>
-                  )}
-                  {errors.file && (
-                    <Typography variant="caption" color="error" sx={{ mt: 1 }}>
-                      {errors.file}
-                    </Typography>
-                  )}
-                </Box>
-                <Box mt={2}>
-                  <Alert severity="info" icon={<InfoIcon fontSize="small" />}>
-                    <Typography variant="caption">
-                      Asegúrate de que la imagen o PDF sea legible y contenga la información del pago.
-                    </Typography>
-                  </Alert>
-                </Box>
-              </Grid>
-            </Grid>
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
-          <Button 
-            onClick={() => !isProcessing && setShowManualPayment(false)}
-            disabled={isProcessing}
-            color="inherit"
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            disabled={isProcessing || !formData.paymentProof}
-            startIcon={isProcessing ? <CircularProgress size={20} color="inherit" /> : <CloudUploadIcon />}
-          >
-            {isProcessing ? 'Subiendo...' : 'Subir Comprobante'}
-          </Button>
-        </DialogActions>
-      </form>
-    </Dialog>
-  );
-
-  // Payment history component
-  const renderPaymentHistory = () => {
-    const [localPayments, setLocalPayments] = useState<Payment[]>([]);
-    const [localLoading, setLocalLoading] = useState(false);
-    const [localSelectedPayment, setLocalSelectedPayment] = useState<Payment | null>(null);
-    const [localShowHistory, setLocalShowHistory] = useState(false);
-    
-    // Mock data for development
-    useEffect(() => {
-      setLocalLoading(true);
-      // Simulate API call
-      const timer = setTimeout(() => {
-        setLocalPayments([
-          {
-            _id: '1',
-            id: '1',
-            amount: 100,
-            date: '2023-01-01',
-            paymentDate: '2023-01-01',
-            status: 'approved',
-            reference: 'REF-123',
-            paymentMethod: 'transfer',
-            method: 'Transferencia Bancaria',
-            receiptUrl: '/receipts/sample.pdf',
-            currency: 'PEN',
-            description: 'Pago mensual de suscripción'
-          }
-        ]);
-        setLocalLoading(false);
-      }, 500);
-      
-      return () => clearTimeout(timer);
-    }, []);
 
   return (
-    <Card sx={{ mt: 3 }}>
-      <CardHeader 
-        title={
-          <Box display="flex" alignItems="center" justifyContent="space-between">
-            <Box display="flex" alignItems="center">
-              <HistoryIcon sx={{ mr: 1 }} />
-              <span>Historial de Pagos</span>
-            </Box>
-            <IconButton 
-              onClick={() => setLocalShowHistory(!localShowHistory)}
-              size="small"
-            >
-              {localShowHistory ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            </IconButton>
-          </Box>
-        } 
-      />
-      <Collapse in={localShowHistory}>
+    <>
+      <Card>
         <CardContent>
-          {localIsLoading ? (
-            <Box display="flex" justifyContent="center" p={3}>
-              <CircularProgress />
-            </Box>
-          ) : localPayments.length === 0 ? (
-            <Alert severity="info">No hay registros de pagos</Alert>
-          ) : (
-            <TableContainer>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Fecha</TableCell>
-                    <TableCell>Monto</TableCell>
-                    <TableCell>Estado</TableCell>
-                    <TableCell>Método</TableCell>
-                    <TableCell>Referencia</TableCell>
-                    <TableCell>Acciones</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {localPayments.map((payment) => (
-                    <TableRow 
-                      key={payment._id}
-                      hover
-                      onClick={() => setLocalSelectedPayment(payment)}
-                      sx={{ cursor: 'pointer' }}
-                    >
-                      <TableCell>
-                        {format(new Date(payment.paymentDate), 'dd/MM/yyyy', { locale: es })}
-                      </TableCell>
-                      <TableCell>
-                        S/ {payment.amount.toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        <Chip 
-                          label={payment.status}
-                          color={
-                            payment.status === 'aprobado' ? 'success' : 
-                            payment.status === 'pendiente' ? 'warning' : 'error'
-                          }
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell>{payment.paymentMethod}</TableCell>
-                      <TableCell>{payment.reference || 'N/A'}</TableCell>
-                      <TableCell>
-                        <IconButton size="small">
-                          <VisibilityIcon fontSize="small" />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
-        </CardContent>
-      </Collapse>
-    </Card>
-  );
-};
+          <Typography variant="h5" gutterBottom>
+            Configuración de Pagos
+          </Typography>
 
-// Modal de detalle de pago
-const renderPaymentDetail = (): JSX.Element | null => {
-  if (!paymentDetail) return null;
-  
-  return (
-    <Dialog 
-      open={!!selectedPayment} 
-      onClose={() => setSelectedPayment(null)}
-      maxWidth="md"
-      fullWidth
-    >
-      {selectedPayment && (
-        <>
-          <DialogTitle>Detalle del Pago</DialogTitle>
-          <DialogContent>
-            <Box display="grid" gridTemplateColumns="repeat(12, 1fr)" gap={2}>
-              <Box gridColumn="span 12" sm={6}>
-                <Typography variant="subtitle1">Monto:</Typography>
-                <Typography variant="body1">{selectedPayment.amount} {selectedPayment.currency}</Typography>
-              </Box>
-              <Box gridColumn="span 12" sm={6}>
-                <Typography variant="subtitle1">Estado:</Typography>
-                <StyledStatusChip 
-                  status={selectedPayment.status} 
-                  label={selectedPayment.status}
-                />
-              </Box>
-              <Box gridColumn="span 12" sm={6}>
-                <Typography variant="subtitle1">Método:</Typography>
-                <Typography variant="body1">
-                  {PAYMENT_METHODS.find(m => m.value === selectedPayment.method)?.label || selectedPayment.method}
-                </Typography>
-              </Box>
-              <Box gridColumn="span 12" sm={6}>
-                <Typography variant="subtitle1">Referencia:</Typography>
-                <Typography variant="body1">{selectedPayment.reference}</Typography>
-              </Box>
-              {selectedPayment.description && (
-                <Box gridColumn="span 12">
-                  <Typography variant="subtitle1">Descripción:</Typography>
-                  <Typography variant="body1">{selectedPayment.description}</Typography>
-                </Box>
-              )}
-              {selectedPayment.receiptUrl && (
-                <Box gridColumn="span 12">
-                  <Button
-                    variant="outlined"
+          <Box mt={3}>
+            <Typography variant="h6" gutterBottom>
+              Estado del Sistema de Pagos
+            </Typography>
+            <Box display="flex" alignItems="center">
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={isActive}
+                    onChange={(e) => setIsActive(e.target.checked)}
                     color="primary"
-                    startIcon={<PictureAsPdfIcon />}
-                    onClick={() => window.open(selectedPayment.receiptUrl, '_blank')}
-                  >
-                    Ver Comprobante
-                  </Button>
-                </Box>
-              )}
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setSelectedPayment(null)} color="primary">
-              Cerrar
-            </Button>
-          </DialogActions>
-        </>
-      )}
-    </Dialog>
-  );
-        title={
-          <Box display="flex" alignItems="center">
-            <SettingsIcon />
-            <span>Configuración de Pagos</span>
-          </Box>
-        } 
-      />
-      <CardContent>
-        <Box position="relative">
-          {(isLoading || isSaving) && (
-            <LoadingOverlay>
-              <CircularProgress />
-            </LoadingOverlay>
-          )}
-
-          {error && (
-            <Alert 
-              severity="error" 
-              sx={{ mb: 3 }} 
-              action={
-                showRetry && (
-                  <Button 
-                    color="inherit" 
-                    size="small" 
-                    onClick={handleRetry}
-                    startIcon={<RefreshIcon />}
-                  >
-                    Reintentar
-                  </Button>
-                )
-              }
-            >
-              {error}
-            </Alert>
-          )}
-
-          <Box display="flex" justifyContent="space-between" alignItems="center">
-            <Box>
-              <Typography variant="h6" gutterBottom>
-                Estado del Sistema de Pagos
-              </Typography>
-              <StatusIndicator isActive={isActive}>
-                {isActive ? (
-                  <>
-                    <CheckCircleIcon />
-                    <span>Activo</span>
-                  </>
-                ) : (
-                  <>
-                    <ErrorIcon />
-                    <span>Inactivo</span>
-                  </>
-                )}
-              </StatusIndicator>
-            </Box>
-            
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={switchChecked}
-                  onChange={handleSwitchChange}
-                  color="primary"
-                  disabled={isLoading || isSaving}
-                />
-              }
-              label={switchChecked ? 'Activado' : 'Desactivado'}
-              labelPlacement="start"
-            />
-          </Box>
-
-          {!isActive && reason && (
-            <Alert severity="info" icon={<InfoIcon />} sx={{ mt: 2 }}>
-              <Typography variant="body2">
-                <strong>Razón de desactivación:</strong> {reason}
-              </Typography>
-            </Alert>
-          )}
-
-          <Collapse in={showReasonInput}>
-            <ReasonForm onSubmit={handleSubmit}>
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                variant="outlined"
-                label="Razón de desactivación"
-                value={tempReason}
-                onChange={(e) => setTempReason(e.target.value)}
-                helperText="Por favor, indique el motivo por el cual se desactiva el sistema de pagos"
-                required
+                  />
+                }
+                label={isActive ? "Activado" : "Desactivado"}
               />
-              <ActionButtons>
-                <Button
-                  variant="outlined"
-                  onClick={handleCancel}
-                  disabled={isSaving}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                  startIcon={<SaveIcon />}
-                  disabled={isSaving || !tempReason.trim()}
-                >
-                  {isSaving ? 'Guardando...' : 'Confirmar'}
-                </Button>
-              </ActionButtons>
-            </ReasonForm>
-          </Collapse>
+            </Box>
+          </Box>
+
+          <Box mt={3}>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => setShowManualPayment(true)}
+            >
+              Registrar Pago Manual
+            </Button>
+          </Box>
 
           <Box mt={4}>
-            <Typography variant="h6" gutterBottom>
-              Información de Pago
-            </Typography>
-            <Card variant="outlined" sx={{ p: 2, mb: 2 }}>
-              <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                <Typography><strong>Estado del Pago:</strong></Typography>
-                <Chip 
-                  label={isActive ? 'Al día' : 'Pendiente'} 
-                  color={isActive ? 'success' : 'warning'} 
-                  size="small" 
-                />
-              </Box>
-              <Typography variant="body2" color="textSecondary" gutterBottom>
-                <strong>Próximo vencimiento:</strong> 10/06/2024
-              </Typography>
-              <Typography variant="h6" sx={{ mt: 1, mb: 2 }}>
-                <strong>Monto a pagar:</strong> S/ 99.00
-              </Typography>
-              
-              <Box display="flex" gap={2} flexWrap="wrap">
-                <Button 
-                  variant="contained" 
-                  color="primary"
-                  startIcon={<PaymentIcon />}
-                  onClick={() => setShowPaymentDialog(true)}
-                >
-                  Pagar Ahora
-                </Button>
-                <Button 
-                  variant="outlined" 
-                  startIcon={<ReceiptIcon />}
-                  onClick={() => setShowManualPayment(true)}
-                >
-                  Subir Comprobante
-                </Button>
-              </Box>
-            </Card>
-            
-            <LastUpdatedInfo>
-              <Typography variant="caption" display="block" color="textSecondary">
-                <strong>Última actualización:</strong> {lastUpdated || 'Nunca'}
-              </Typography>
-              <Typography variant="caption" display="block" color="textSecondary">
-                <strong>Actualizado por:</strong> {lastUpdatedBy || 'Sistema'}
-              </Typography>
-            </LastUpdatedInfo>
+            {renderPaymentHistory()}
           </Box>
-        </Box>
-      </CardContent>
+        </CardContent>
       </Card>
-      
-      {/* Historial de pagos */}
-      {renderPaymentHistory()}
-      
+
       {/* Modales */}
-      {renderPaymentDialog()}
       {renderManualPaymentDialog()}
       {renderPaymentDetail()}
     </>

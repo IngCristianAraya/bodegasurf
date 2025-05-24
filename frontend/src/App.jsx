@@ -2,7 +2,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import Layout from './components/Layout';
@@ -17,10 +16,11 @@ import Informacion from './pages/Informacion';
 import TransactionsPage from './pages/TransactionsPage';
 import TransactionDetails from './components/transactions/TransactionDetails';
 import PaymentSettingsPage from './pages/admin/PaymentSettingsPage';
+import ReportesPage from './pages/admin/ReportesPage';
 
 function App() {
   return (
-    <AuthProvider>
+    <>
       <Layout>
         <ErrorBoundary>
           <Routes>
@@ -72,6 +72,11 @@ function App() {
                 <PaymentSettingsPage />
               </ProtectedRoute>
             } />
+            <Route path="/admin/reportes" element={
+              <ProtectedRoute adminOnly={true}>
+                <ReportesPage />
+              </ProtectedRoute>
+            } />
             <Route path="/informacion" element={
               <ProtectedRoute>
                 <Informacion />
@@ -80,7 +85,7 @@ function App() {
           </Routes>
         </ErrorBoundary>
       </Layout>
-      <ToastContainer 
+      <ToastContainer
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
@@ -91,7 +96,7 @@ function App() {
         draggable
         pauseOnHover
       />
-    </AuthProvider>
+    </>
   );
 }
 

@@ -9,6 +9,7 @@ import {
   Users,
   ClipboardList,
   Truck,
+  FileText,
   Info,
   CreditCard,
   Receipt,
@@ -28,19 +29,20 @@ const Sidebar = () => {
     { name: "clientes", label: "Clientes", icon: Users, path: "/clientes" },
     { name: "pedidos", label: "Pedidos", icon: ClipboardList, path: "/pedidos" },
     { name: "proveedores", label: "Proveedores", icon: Truck, path: "/proveedores" },
+    { name: "reportes", label: "Reportes", icon: FileText, path: "/admin/reportes" },
     { name: "informacion", label: "Información", icon: Info, path: "/informacion" },
     // Sección de administración
-    { 
-      name: "admin", 
-      label: "Administración", 
-      icon: Shield, 
+    {
+      name: "admin",
+      label: "Administración",
+      icon: Shield,
       path: "/admin",
       children: [
-        { 
-          name: "payment-settings", 
-          label: "Configuración de Pagos", 
-          icon: Settings, 
-          path: "/admin/payment-settings" 
+        {
+          name: "payment-settings",
+          label: "Configuración de Pagos",
+          icon: Settings,
+          path: "/admin/payment-settings"
         }
       ]
     },
@@ -74,21 +76,19 @@ const Sidebar = () => {
                   <ul className="mt-1 space-y-1 pl-8">
                     {children.map(({ name: childName, label: childLabel, icon: ChildIcon, path: childPath }) => (
                       <li key={childName} className="list-none">
-                        <Link 
-                          to={childPath} 
+                        <Link
+                          to={childPath}
                           className="no-underline block group"
                           onClick={() => setActive(childName)}
                         >
                           <div
-                            className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${
-                              active === childName 
-                                ? "bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-md" 
+                            className={`flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all duration-300 ${active === childName
+                                ? "bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-md"
                                 : "text-gray-700 hover:bg-gray-100 hover:text-orange-600"
-                            } group-hover:translate-x-1`}
+                              } group-hover:translate-x-1`}
                           >
-                            <ChildIcon className={`w-4 h-4 transition-colors duration-300 ${
-                              active === childName ? 'text-white' : 'text-orange-500 group-hover:text-orange-600'
-                            }`} />
+                            <ChildIcon className={`w-4 h-4 transition-colors duration-300 ${active === childName ? 'text-white' : 'text-orange-500 group-hover:text-orange-600'
+                              }`} />
                             <span>{childLabel}</span>
                           </div>
                         </Link>
@@ -97,21 +97,19 @@ const Sidebar = () => {
                   </ul>
                 </div>
               ) : (
-                <Link 
-                  to={path} 
+                <Link
+                  to={path}
                   className="no-underline block group"
                   onClick={() => setActive(name)}
                 >
                   <div
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium cursor-pointer transition-all duration-300 ${
-                      active === name 
-                        ? "bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-md" 
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg text-base font-medium cursor-pointer transition-all duration-300 ${active === name
+                        ? "bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-md"
                         : "text-gray-700 hover:bg-gray-100 hover:text-orange-600"
-                    } group-hover:translate-x-1`}
+                      } group-hover:translate-x-1`}
                   >
-                    <Icon className={`w-5 h-5 transition-colors duration-300 ${
-                      active === name ? 'text-white' : 'text-orange-500 group-hover:text-orange-600'
-                    }`} />
+                    <Icon className={`w-5 h-5 transition-colors duration-300 ${active === name ? 'text-white' : 'text-orange-500 group-hover:text-orange-600'
+                      }`} />
                     <span>{label}</span>
                   </div>
                 </Link>

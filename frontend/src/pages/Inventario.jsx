@@ -11,6 +11,7 @@ import TablaInventario from "../components/TablaInventario";
 import ImportExport from "../components/ImportExport";
 import AlertasInventario from "../components/AlertasInventario";
 import EscanerCodigoBarras from "../components/EscanerCodigoBarras";
+import api from "../config/axios";
 
 // Componente personalizado para notificaciones
 const CustomToast = ({ message, type = 'success' }) => (
@@ -30,7 +31,7 @@ const CustomToast = ({ message, type = 'success' }) => (
 const Inventario = () => {
   const { searchTerm, updateSearchTerm } = useSearch();
   const { productos, agregarProducto, actualizarProducto, eliminarProducto } = useContext(InventarioContext);
-  
+
   const handleSearchChange = (e) => {
     updateSearchTerm(e.target.value);
   };
@@ -38,9 +39,9 @@ const Inventario = () => {
   // Filtrar productos según el término de búsqueda
   const productosFiltrados = useMemo(() => {
     if (!searchTerm) return productos;
-    
+
     const term = searchTerm.toLowerCase();
-    return productos.filter(producto => 
+    return productos.filter(producto =>
       (producto.nombre && producto.nombre.toLowerCase().includes(term)) ||
       (producto.categoria && producto.categoria.toLowerCase().includes(term)) ||
       (producto.codigoBarras && producto.codigoBarras.includes(term))
@@ -50,7 +51,7 @@ const Inventario = () => {
   const [showModal, setShowModal] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [productoEdit, setProductoEdit] = useState(null);
-  
+
   const handleShowScanner = () => setShowScanner(true);
   const handleCloseScanner = () => setShowScanner(false);
   const handleShowModal = () => setShowModal(true);
@@ -58,27 +59,28 @@ const Inventario = () => {
     setShowModal(false);
     setProductoEdit(null);
   };
-  
+
   const [nuevoProducto, setNuevoProducto] = useState({
-    nombre: "", 
-    categoria: "Abarrotes", 
-    precioCompra: 0, 
-    precioVenta: 0, 
-    unidad: "unidad", 
+    nombre: "",
+    categoria: "Abarrotes",
+    precioCompra: 0,
+    precioVenta: 0,
+    unidad: "unidad",
     stock: 0,
     stockMinimo: 0,
-    codigoBarras: ""
+    codigoBarras: "",
   });
+  const [archivoImagenSeleccionada, setArchivoImagenSeleccionada] = useState(null);
 
   const handleChange = (e) => {
     const { name, value, type } = e.target;
-    
+
     // Determinar si el campo es numérico
     const isNumericField = ['precioCompra', 'precioVenta', 'stock', 'stockMinimo'].includes(name);
-    
+
     // Procesar el valor según el tipo de campo
     let processedValue = value;
-    
+
     if (isNumericField) {
       // Permitir cadena vacía o convertir a número
       processedValue = value === '' ? 0 : Number(value);
@@ -87,7 +89,7 @@ const Inventario = () => {
         processedValue = productoEdit ? (productoEdit[name] || 0) : (nuevoProducto[name] || 0);
       }
     }
-    
+
     if (productoEdit) {
       setProductoEdit((prev) => ({ ...prev, [name]: processedValue }));
     } else {
@@ -95,34 +97,58 @@ const Inventario = () => {
     }
   };
 
+  const handleFileChange = (file) => {
+    setArchivoImagenSeleccionada(file);
+  };
+
   const handleEditar = (producto) => {
     setProductoEdit(producto);
     setShowModal(true);
   };
 
-  // handleCloseModal ya está definido más abajo
+  const subirImagenAlServidor = async (file) => {
+    if (!file) return null;
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const { data } = await api.post('/uploads/image', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      return data.data;
+    } catch (error) {
+      console.error('Error al subir la imagen:', error);
+      toast.error('Error al subir la imagen: ' + (error.response?.data?.message || error.message));
+      return null;
+    }
+  };
 
   const handleSaveChanges = async () => {
     try {
-      // Crear una copia del producto editado
-      const productoActualizado = { ...productoEdit };
-      
-      // Si hay una nueva imagen, manejarla antes de guardar
-      if (productoEdit.imagen && productoEdit.imagen instanceof File) {
-        // En un entorno real, aquí subirías la imagen a un servidor
-        // Por ahora, solo usamos el nombre del archivo como referencia
-        const imageName = `producto_${Date.now()}_${productoEdit.imagen.name}`;
-        productoActualizado.imagen = `/productos/${imageName}`;
-        
-        // Aquí iría la lógica para subir el archivo al servidor
-        // Por ejemplo: await subirImagen(productoEdit.imagen, imageName);
+      let productoParaActualizar = { ...productoEdit };
+      let datosImagenSubida = null;
+
+      if (archivoImagenSeleccionada) {
+        datosImagenSubida = await subirImagenAlServidor(archivoImagenSeleccionada);
+        if (datosImagenSubida) {
+          productoParaActualizar.images = [{ url: datosImagenSubida.url, public_id: datosImagenSubida.filename }];
+        } else {
+          return;
+        }
+      } else if (productoEdit.images && productoEdit.images.length > 0) {
+        productoParaActualizar.images = productoEdit.images;
+      } else {
+        productoParaActualizar.images = [];
       }
-      
-      // Actualizar el producto en el inventario
-      await actualizarProducto(productoActualizado);
-      
-      // Cerrar el modal y mostrar mensaje de éxito
+
+      delete productoParaActualizar.imagen;
+
+      await actualizarProducto(productoParaActualizar);
+
       handleCloseModal();
+      setArchivoImagenSeleccionada(null);
       toast.success('Producto actualizado correctamente');
     } catch (error) {
       console.error('Error al actualizar el producto:', error);
@@ -133,43 +159,36 @@ const Inventario = () => {
   const handleAddProducto = async (e) => {
     e.preventDefault();
     try {
-      // Crear un nuevo objeto de producto con los datos del formulario
-      const newProduct = { 
+      let productoFinalParaAgregar = {
         ...nuevoProducto,
         precioCompra: parseFloat(nuevoProducto.precioCompra),
         precioVenta: parseFloat(nuevoProducto.precioVenta),
         stock: parseInt(nuevoProducto.stock, 10),
         stockMinimo: parseInt(nuevoProducto.stockMinimo, 10) || 0,
-        // La imagen ya debería estar en nuevoProducto.imagen
       };
-      
-      // Si hay una imagen, la manejamos antes de guardar
-      if (nuevoProducto.imagen && nuevoProducto.imagen instanceof File) {
-        // En un entorno real, aquí subirías la imagen a un servidor
-        // Por ahora, solo usamos el nombre del archivo como referencia
-        const imageName = `producto_${Date.now()}_${nuevoProducto.imagen.name}`;
-        newProduct.imagen = `/productos/${imageName}`;
-        
-        // Aquí iría la lógica para subir el archivo al servidor
-        // Por ejemplo: await subirImagen(nuevoProducto.imagen, imageName);
+      let datosImagenSubida = null;
+
+      if (archivoImagenSeleccionada) {
+        datosImagenSubida = await subirImagenAlServidor(archivoImagenSeleccionada);
+        if (datosImagenSubida) {
+          productoFinalParaAgregar.images = [{ url: datosImagenSubida.url, public_id: datosImagenSubida.filename }];
+        } else {
+          return;
+        }
+      } else {
+        productoFinalParaAgregar.images = [];
       }
-      
-      // Agregar el producto al inventario
-      await agregarProducto(newProduct);
-      
-      // Resetear el formulario
+
+      delete productoFinalParaAgregar.imagen;
+
+      await agregarProducto(productoFinalParaAgregar);
+
       setNuevoProducto({
-        nombre: "", 
-        categoria: "Abarrotes", 
-        precioCompra: "", 
-        precioVenta: "", 
-        unidad: "unidad", 
-        stock: "",
-        stockMinimo: "",
-        codigoBarras: "",
-        imagen: ""
+        nombre: "", categoria: "Abarrotes", precioCompra: "", precioVenta: "",
+        unidad: "unidad", stock: "", stockMinimo: "", codigoBarras: "",
       });
-      
+      setArchivoImagenSeleccionada(null);
+      handleCloseModal();
       toast.success('Producto agregado correctamente');
     } catch (error) {
       console.error('Error al agregar el producto:', error);
@@ -192,7 +211,7 @@ const Inventario = () => {
   const handleBarcodeScanned = (barcode) => {
     // Buscar si el código de barras ya existe
     const productoExistente = productos.find(p => p.codigoBarras === barcode);
-    
+
     if (productoExistente) {
       // Si el producto existe, abrir el modal de edición
       setProductoEdit(productoExistente);
@@ -211,7 +230,7 @@ const Inventario = () => {
       setShowModal(true);
     }
   };
-  
+
   const handleImportData = async (importedData) => {
     try {
       // Formatear los datos importados
@@ -223,12 +242,12 @@ const Inventario = () => {
         stockMinimo: parseInt(item.stockMinimo, 10) || 0,
         codigoBarras: item.codigoBarras || `CB-${Date.now()}-${Math.floor(Math.random() * 1000)}`
       }));
-      
+
       // Agregar cada producto usando el contexto
       for (const item of formattedData) {
         await agregarProducto(item);
       }
-      
+
       toast.success(`Se importaron ${formattedData.length} productos correctamente`);
     } catch (error) {
       console.error('Error al importar datos:', error);
@@ -251,7 +270,7 @@ const Inventario = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Modal del escáner de código de barras */}
       <Modal show={showScanner} onHide={handleCloseScanner} size="lg">
         <Modal.Header closeButton>
@@ -264,7 +283,7 @@ const Inventario = () => {
           }} />
         </Modal.Body>
       </Modal>
-      
+
       {/* Sección principal con dos columnas */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 flex-1 min-h-0">
         {/* Columna izquierda: Formulario de producto */}
@@ -278,11 +297,12 @@ const Inventario = () => {
               </div>
             </div>
             <div className="flex-1 overflow-y-auto">
-              <FormularioProducto 
-                producto={nuevoProducto} 
-                onChange={handleChange} 
-                onSubmit={handleAddProducto}
-                onScanClick={() => setShowScanner(true)}
+              <FormularioProducto
+                producto={productoEdit || nuevoProducto}
+                onChange={handleChange}
+                onFileChange={handleFileChange}
+                onSubmit={productoEdit ? handleSaveChanges : handleAddProducto}
+                onScanClick={handleShowScanner}
                 hideHeader={true}
               />
             </div>
@@ -300,9 +320,9 @@ const Inventario = () => {
               </div>
             </div>
             <div className="flex-1 flex flex-col min-h-0">
-              <TablaInventario 
-                productos={productosFiltrados} 
-                onEditar={handleEditar} 
+              <TablaInventario
+                productos={productosFiltrados}
+                onEditar={handleEditar}
                 onEliminar={handleDelete}
                 searchTerm={searchTerm}
                 onSearchChange={handleSearchChange}
@@ -326,16 +346,16 @@ const Inventario = () => {
             <p className="text-sm text-gray-500">Importa o exporta la información de tu inventario</p>
           </div>
         </div>
-        <ImportExport 
-          productos={productos} 
-          onImport={handleImportData} 
+        <ImportExport
+          productos={productos}
+          onImport={handleImportData}
         />
       </div>
-      
+
       {/* Alertas flotantes */}
-      <AlertasInventario 
-        productos={productos} 
-        nivelMinino={5} 
+      <AlertasInventario
+        productos={productos}
+        nivelMinino={5}
       />
       {showScanner && (
         <EscanerCodigoBarras
@@ -352,11 +372,17 @@ const Inventario = () => {
           <Modal.Title>Editar Producto</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <FormularioProducto producto={productoEdit || {}} onChange={handleChange} />
+          <FormularioProducto
+            producto={productoEdit || nuevoProducto}
+            onChange={handleChange}
+            onFileChange={handleFileChange}
+            onSubmit={productoEdit ? handleSaveChanges : handleAddProducto}
+            onScanClick={handleShowScanner}
+          />
         </Modal.Body>
         <Modal.Footer>
           <button className="bg-gray-400 text-white px-4 py-2 rounded-md" onClick={handleCloseModal}>Cancelar</button>
-          <button className="bg-blue-500 text-white px-4 py-2 rounded-md" onClick={handleSaveChanges}>Guardar Cambios</button>
+          <button className="bg-blue-500 text-white px-4 py-2 rounded-md" onClick={productoEdit ? handleSaveChanges : handleAddProducto}>Guardar Cambios</button>
         </Modal.Footer>
       </Modal>
     </div>

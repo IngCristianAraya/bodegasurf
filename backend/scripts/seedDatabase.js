@@ -11,9 +11,9 @@ const seedDatabase = async () => {
   try {
     // Conectar a la base de datos
     await connectDB();
-    
+
     console.log('Iniciando la siembra de la base de datos...');
-    
+
     // Eliminar datos existentes (excepto el tenant por defecto)
     await Promise.all([
       User.deleteMany({}),
@@ -21,12 +21,12 @@ const seedDatabase = async () => {
       Customer.deleteMany({}),
       Sale.deleteMany({}),
     ]);
-    
+
     console.log('Datos existentes eliminados');
-    
+
     // Obtener el tenant por defecto o crearlo si no existe
     let tenant = await Tenant.findOne({ subdomain: 'default' });
-    
+
     if (!tenant) {
       console.log('Creando tenant por defecto...');
       tenant = await Tenant.create({
@@ -59,14 +59,14 @@ const seedDatabase = async () => {
       });
       console.log('Tenant por defecto creado:', tenant);
     }
-    
+
     const tenantId = tenant._id;
-    
+
     // Crear usuarios de ejemplo
     console.log('Creando usuarios de ejemplo...');
     const adminPassword = await bcrypt.hash('admin123', 10);
     const userPassword = await bcrypt.hash('user123', 10);
-    
+
     const adminUser = await User.create({
       name: 'Administrador',
       email: 'admin@example.com',
@@ -75,7 +75,7 @@ const seedDatabase = async () => {
       tenantId,
       isActive: true
     });
-    
+
     const regularUser = await User.create({
       name: 'Usuario de Prueba',
       email: 'usuario@example.com',
@@ -84,9 +84,9 @@ const seedDatabase = async () => {
       tenantId,
       isActive: true
     });
-    
+
     console.log('Usuarios creados:', { admin: adminUser.email, user: regularUser.email });
-    
+
     // Crear productos de ejemplo
     console.log('Creando productos de ejemplo...');
     const products = [
@@ -141,10 +141,10 @@ const seedDatabase = async () => {
         tenantId
       }
     ];
-    
+
     const createdProducts = await Product.insertMany(products);
     console.log(`${createdProducts.length} productos creados`);
-    
+
     // Crear clientes de ejemplo
     console.log('Creando clientes de ejemplo...');
     const customers = [
@@ -192,16 +192,16 @@ const seedDatabase = async () => {
         tenantId
       }
     ];
-    
+
     const createdCustomers = await Customer.insertMany(customers);
     console.log(`${createdCustomers.length} clientes creados`);
-    
+
     // Crear ventas de ejemplo
     console.log('Creando ventas de ejemplo...');
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     const sales = [
       {
         saleNumber: 'V-' + today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-001',
@@ -281,10 +281,10 @@ const seedDatabase = async () => {
         createdAt: yesterday
       }
     ];
-    
+
     const createdSales = await Sale.insertMany(sales);
     console.log(`${createdSales.length} ventas creadas`);
-    
+
     // Actualizar el stock de productos basado en las ventas
     for (const sale of sales) {
       for (const item of sale.items) {
@@ -295,7 +295,7 @@ const seedDatabase = async () => {
         );
       }
     }
-    
+
     console.log('Base de datos sembrada exitosamente!');
     process.exit(0);
   } catch (error) {

@@ -1,0 +1,13 @@
+@echo off
+echo ============================================
+echo Iniciando Sistema de Ventas para Bodegas
+echo ============================================
+echo Instalando dependencias...
+call npm install
+echo Instalando dependencias del backend...
+cd backend && call npm install && cd ..
+echo Instalando dependencias del frontend...
+cd frontend && call npm install --legacy-peer-deps && cd ..
+echo Iniciando servicios...
+call npm start
+pause 

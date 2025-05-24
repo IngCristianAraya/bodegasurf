@@ -1,4 +1,7 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
+import { useAuth } from './AuthContext'; // Asumiendo que está en el mismo nivel o ajustar ruta
+import { useInventarioSync } from '../hooks/useInventarioSync'; // Ajustar ruta si es necesario
+import { toast } from 'react-toastify';
 
 const InventarioContext = createContext();
 
@@ -7,340 +10,92 @@ export const useInventario = () => {
 };
 
 export const InventarioProvider = ({ children }) => {
-  const [productos, setProductos] = useState(() => {
-    const saved = localStorage.getItem('inventario-productos');
-    return saved ? JSON.parse(saved) : [
-      // Lácteos y Huevos
-      { 
-        id: 1, 
-        nombre: "Leche Gloria 1L", 
-        categoria: "Lácteos y Huevos", 
-        precioCompra: 3.20, 
-        precioVenta: 4.20, 
-        unidad: "litros", 
-        stock: 50, 
-        stockMinimo: 10,
-        codigoBarras: "100000000001",
-        imagen: "/productos/leche.jpg"
-      },
-      { 
-        id: 2, 
-        nombre: "Huevos x12", 
-        categoria: "Lácteos y Huevos", 
-        precioCompra: 7.50, 
-        precioVenta: 9.50, 
-        unidad: "docenas", 
-        stock: 30, 
-        stockMinimo: 5,
-        codigoBarras: "100000000002",
-        imagen: "/productos/huevos.jpg"
-      },
-      
-      // Abarrotes
-      { 
-        id: 11, 
-        nombre: "Arroz Costeño 1kg", 
-        categoria: "Abarrotes", 
-        precioCompra: 3.50, 
-        precioVenta: 4.50, 
-        unidad: "kilos", 
-        stock: 80, 
-        stockMinimo: 15,
-        codigoBarras: "200000000001",
-        imagen: "/productos/arroz.jpg"
-      },
-      { 
-        id: 12, 
-        nombre: "Aceite Primor 1L", 
-        categoria: "Abarrotes", 
-        precioCompra: 10.00, 
-        precioVenta: 12.00, 
-        unidad: "litros", 
-        stock: 35, 
-        stockMinimo: 8,
-        codigoBarras: "200000000002",
-        imagen: "/productos/aceite.jpg"
-      },
-      { 
-        id: 13, 
-        nombre: "Fideos Tallarín 500g", 
-        categoria: "Abarrotes", 
-        precioCompra: 2.80, 
-        precioVenta: 3.50, 
-        unidad: "paquetes", 
-        stock: 45, 
-        stockMinimo: 10,
-        codigoBarras: "200000000003",
-        imagen: "/productos/fideos.jpg"
-      },
-      
-      // Snack y Golosinas
-      { 
-        id: 21, 
-        nombre: "Galletas de Vainilla", 
-        categoria: "Snack y Golosinas", 
-        precioCompra: 2.00, 
-        precioVenta: 2.80, 
-        unidad: "paquetes", 
-        stock: 50, 
-        stockMinimo: 15,
-        codigoBarras: "300000000001",
-        imagen: "/productos/galletas.jpg"
-      },
-      { 
-        id: 22, 
-        nombre: "Chocolates Variados", 
-        categoria: "Snack y Golosinas", 
-        precioCompra: 4.00, 
-        precioVenta: 5.50, 
-        unidad: "unidades", 
-        stock: 40, 
-        stockMinimo: 10,
-        codigoBarras: "300000000002",
-        imagen: "/productos/chocolates.jpg"
-      },
-      
-      // Higiene Personal
-      { 
-        id: 31, 
-        nombre: "Jabón Corporal", 
-        categoria: "Higiene Personal", 
-        precioCompra: 4.00, 
-        precioVenta: 5.80, 
-        unidad: "unidades", 
-        stock: 35, 
-        stockMinimo: 10,
-        codigoBarras: "400000000001",
-        imagen: "/productos/jabon-corporal.jpg"
-      },
-      { 
-        id: 32, 
-        nombre: "Shampoo 400ml", 
-        categoria: "Higiene Personal", 
-        precioCompra: 8.00, 
-        precioVenta: 10.50, 
-        unidad: "unidades", 
-        stock: 25, 
-        stockMinimo: 8,
-        codigoBarras: "400000000002",
-        imagen: "/productos/shampoo.jpg"
-      },
-      // Limpieza Hogar
-      { 
-        id: 41, 
-        nombre: "Detergente 1L", 
-        categoria: "Limpieza Hogar", 
-        precioCompra: 5.50, 
-        precioVenta: 7.50, 
-        unidad: "botellas", 
-        stock: 25, 
-        stockMinimo: 8,
-        codigoBarras: "500000000001",
-        imagen: "/productos/detergente.jpg"
-      },
-      { 
-        id: 42, 
-        nombre: "Desinfectante 1L", 
-        categoria: "Limpieza Hogar", 
-        precioCompra: 4.50, 
-        precioVenta: 6.80, 
-        unidad: "botellas", 
-        stock: 20, 
-        stockMinimo: 5,
-        codigoBarras: "500000000002",
-        imagen: "/productos/desinfectante.jpg"
-      },
-      
-      // Panadería y Pastelería
-      { 
-        id: 51, 
-        nombre: "Pan de Molde Integral", 
-        categoria: "Panadería y Pastelería", 
-        precioCompra: 5.00, 
-        precioVenta: 7.50, 
-        unidad: "unidades", 
-        stock: 15, 
-        stockMinimo: 5,
-        codigoBarras: "600000000001",
-        imagen: "/productos/pan-molde.jpg"
-      },
-      
-      // Enlatados y Congelados
-      { 
-        id: 61, 
-        nombre: "Atún en Lata", 
-        categoria: "Enlatados y Congelados", 
-        precioCompra: 4.00, 
-        precioVenta: 5.50, 
-        unidad: "unidades", 
-        stock: 40, 
-        stockMinimo: 10,
-        codigoBarras: "700000000001",
-        imagen: "/productos/atun.jpg"
-      },
-      { 
-        id: 62, 
-        nombre: "Pizza Congelada", 
-        categoria: "Enlatados y Congelados", 
-        precioCompra: 8.00, 
-        precioVenta: 12.50, 
-        unidad: "unidades", 
-        stock: 10, 
-        stockMinimo: 3,
-        codigoBarras: "700000000002",
-        imagen: "/productos/pizza.jpg"
-      },
-      
-      // Frutas y Verduras
-      { 
-        id: 71, 
-        nombre: "Manzanas", 
-        categoria: "Frutas y Verduras", 
-        precioCompra: 0.80, 
-        precioVenta: 1.20, 
-        unidad: "kilos", 
-        stock: 30, 
-        stockMinimo: 10,
-        codigoBarras: "800000000001",
-        imagen: "/productos/manzana.jpg"
-      },
-      { 
-        id: 72, 
-        nombre: "Zanahorias", 
-        categoria: "Frutas y Verduras", 
-        precioCompra: 0.50, 
-        precioVenta: 0.80, 
-        unidad: "kilos", 
-        stock: 25, 
-        stockMinimo: 8,
-        codigoBarras: "800000000002",
-        imagen: "/productos/zanahoria.jpg"
-      },
-      
-      // Tabaco y Misceláneos
-      { 
-        id: 81, 
-        nombre: "Cigarrillos", 
-        categoria: "Tabaco y Misceláneos", 
-        precioCompra: 12.00, 
-        precioVenta: 15.00, 
-        unidad: "cajetillas", 
-        stock: 20, 
-        stockMinimo: 5,
-        codigoBarras: "900000000001",
-        imagen: "/productos/cigarrillos.jpg"
-      },
-      
-      // Bebidas
-      { 
-        id: 91, 
-        nombre: "Gaseosa 2L", 
-        categoria: "Bebidas", 
-        precioCompra: 4.50, 
-        precioVenta: 6.50, 
-        unidad: "botellas", 
-        stock: 35, 
-        stockMinimo: 10,
-        codigoBarras: "910000000001",
-        imagen: "/productos/gaseosa.jpg"
-      },
-      { 
-        id: 92, 
-        nombre: "Agua Mineral 1L", 
-        categoria: "Bebidas", 
-        precioCompra: 1.50, 
-        precioVenta: 2.50, 
-        unidad: "botellas", 
-        stock: 50, 
-        stockMinimo: 15,
-        codigoBarras: "910000000002",
-        imagen: "/productos/agua.jpg"
-      },
-      
-      // Carnes
-      { 
-        id: 101, 
-        nombre: "Pollo Entero", 
-        categoria: "Carnes", 
-        precioCompra: 8.00, 
-        precioVenta: 10.50, 
-        unidad: "kilos", 
-        stock: 15, 
-        stockMinimo: 5,
-        codigoBarras: "100000000001",
-        imagen: "/productos/pollo.jpg"
-      },
-      { 
-        id: 102, 
-        nombre: "Carne Molida", 
-        categoria: "Carnes", 
-        precioCompra: 12.00, 
-        precioVenta: 15.00, 
-        unidad: "kilos", 
-        stock: 12, 
-        stockMinimo: 4,
-        codigoBarras: "100000000002",
-        imagen: "/productos/carne-molida.jpg"
-      },
-    ];
-  });
+  const { user } = useAuth();
+  const tenantId = user?.tenantId;
 
-  // Guardar en localStorage cuando cambien los productos
-  useEffect(() => {
-    localStorage.setItem('inventario-productos', JSON.stringify(productos));
-  }, [productos]);
+  // Usar el hook useInventarioSync que maneja la lógica de fetch, cache y mutaciones con React Query
+  const {
+    productos: productosDesdeHook,
+    isLoading: isLoadingDesdeHook,
+    error: errorDesdeHook,
+    agregarProducto: agregarProductoConSync,
+    actualizarStock: actualizarStockConSync, // Esta actualiza solo el stock
+    // Necesitamos una función para actualizar todo el producto desde useInventarioSync
+    // Si no existe en el hook, la añadiremos o adaptaremos la existente.
+    // Por ahora, asumimos que el hook podría tener una función como actualizarProductoCompletoConSync
+    // o que la función de actualizar producto en el backend acepta un objeto parcial.
+    // Voy a verificar useInventarioSync para la actualización completa del producto.
+    // De momento, no hay una función específica para actualizar todo el producto en useInventarioSync.
+    // El hook `useInventarioSync` no exporta una función `actualizarProducto` completa,
+    // la página `Inventario.jsx` llama a `actualizarProducto` del contexto que no está conectado.
+    // Vamos a necesitar añadir/usar una mutación para actualizar producto en el hook.
+    // TEMPORALMENTE: dejaremos la función actualizarProducto del contexto sin conectar, 
+    // priorizando la carga y adición/eliminación.
+    eliminarProducto: eliminarProductoConSync,
+  } = useInventarioSync(tenantId); // Pasar tenantId al hook
 
-  const agregarProducto = (nuevoProducto) => {
-    const productoConId = {
-      ...nuevoProducto,
-      id: Date.now(),
-      stock: parseInt(nuevoProducto.stock, 10) || 0,
-      stockMinimo: parseInt(nuevoProducto.stockMinimo, 10) || 0,
-      precioCompra: parseFloat(nuevoProducto.precioCompra) || 0,
-      precioVenta: parseFloat(nuevoProducto.precioVenta) || 0,
-    };
-    setProductos([...productos, productoConId]);
+  // Las funciones de manipulación ahora llamarán a las mutaciones del hook.
+  // El estado de 'productos' vendrá directamente del hook (React Query).
+
+  const agregarProductoContext = async (nuevoProducto) => {
+    if (!tenantId) {
+      toast.error('No se pudo identificar el tenant. Intente de nuevo.');
+      return;
+    }
+    try {
+      // La mutación en useInventarioSync ya maneja la llamada API y la actualización de caché.
+      await agregarProductoConSync(nuevoProducto);
+      toast.success('Producto agregado correctamente');
+    } catch (error) {
+      console.error('Error en agregarProductoContext:', error);
+      toast.error(error.message || 'Error al agregar el producto desde el contexto');
+    }
   };
 
-  const actualizarProducto = (id, productoActualizado) => {
-    setProductos(prevProductos => {
-      const nuevosProductos = prevProductos.map(producto => 
-        producto.id === id ? { ...producto, ...productoActualizado } : producto
-      );
-      localStorage.setItem('inventario-productos', JSON.stringify(nuevosProductos));
-      return nuevosProductos;
-    });
+  const actualizarProductoContext = async (productoActualizado) => {
+    // TODO: Implementar usando una mutación de useInventarioSync para actualizar el producto completo.
+    // Por ahora, esta función no hará nada funcionalmente con el backend.
+    console.warn('actualizarProductoContext no está completamente implementado para sincronizar con backend.');
+    toast.info('La función de actualizar producto aún necesita conectarse al backend.');
+    // Aquí se debería llamar a una mutación similar a agregarProductoConSync pero para PUT/PATCH
+    // Ejemplo: await actualizarProductoCompletoConSync(productoActualizado.id, productoActualizado);
   };
 
-  const actualizarStock = (id, cantidadVendida) => {
-    setProductos(prevProductos => {
-      const nuevosProductos = prevProductos.map(producto => {
-        if (producto.id === id) {
-          const nuevoStock = (producto.stock || 0) - cantidadVendida;
-          return { 
-            ...producto, 
-            stock: Math.max(0, nuevoStock) // Asegurar que el stock no sea negativo
-          };
-        }
-        return producto;
-      });
-      localStorage.setItem('inventario-productos', JSON.stringify(nuevosProductos));
-      return nuevosProductos;
-    });
+  const eliminarProductoContext = async (productoId) => {
+    if (!tenantId) {
+      toast.error('No se pudo identificar el tenant. Intente de nuevo.');
+      return;
+    }
+    try {
+      // La mutación en useInventarioSync ya maneja la llamada API y la actualización de caché.
+      await eliminarProductoConSync(productoId);
+      toast.success('Producto eliminado correctamente');
+    } catch (error) {
+      console.error('Error en eliminarProductoContext:', error);
+      toast.error(error.message || 'Error al eliminar el producto desde el contexto');
+    }
   };
 
-  const eliminarProducto = (id) => {
-    setProductos(productos.filter(producto => producto.id !== id));
-  };
+  // La función de actualizar stock ya está en el hook y se llama directamente desde donde se necesite
+  // o se puede wrappear aquí si se prefiere una interfaz consistente del contexto.
+  // Por ahora, los componentes que necesiten actualizar stock pueden usar `actualizarStockConSync` directamente del hook
+  // o podemos exponerla desde el contexto también.
+
+  // El useEffect para localStorage ya no es necesario, React Query maneja la caché.
 
   return (
-    <InventarioContext.Provider value={{
-      productos,
-      agregarProducto,
-      actualizarProducto,
-      eliminarProducto,
-      actualizarStock
-    }}>
+    <InventarioContext.Provider
+      value={{
+        productos: productosDesdeHook || [], // Asegurar que siempre sea un array
+        isLoading: isLoadingDesdeHook,
+        error: errorDesdeHook,
+        agregarProducto: agregarProductoContext,
+        actualizarProducto: actualizarProductoContext, // Aún no funcional con backend
+        eliminarProducto: eliminarProductoContext,
+        // Podríamos también exponer 'actualizarStockConSync' si es necesario a través del contexto
+        // actualizarStock: actualizarStockConSync,
+      }}
+    >
       {children}
     </InventarioContext.Provider>
   );
